@@ -9,13 +9,19 @@ struct ContentView: View {
             AuthView()
         } else {
             ZStack(alignment: .bottom) {
+                // Light background for main app
+                Color.pairBackground.ignoresSafeArea()
+                
                 TabView(selection: $selectedTab) {
-                    SearchView()
+                    // Tab 0: Discover (compass icon)
+                    ExploreView()
                         .tag(0)
                     
-                    ExploreView()
+                    // Tab 1: Create (+ icon) - Search/Create flow
+                    SearchView()
                         .tag(1)
                     
+                    // Tab 2: Profile (person icon)
                     ProfileView(userId: authManager.userId)
                         .tag(2)
                 }

@@ -1,5 +1,56 @@
 import SwiftUI
 
+// MARK: - Mock Playlist Data for Design
+struct MockPlaylist: Identifiable {
+    let id = UUID()
+    let title: String
+    let description: String
+    let seedTrack: String
+    let seedArtist: String
+    let imageUrl: String
+    let creatorName: String
+    let trackCount: Int
+}
+
+let mockDiscoverPlaylists = [
+    MockPlaylist(
+        title: "Late Night Drive",
+        description: "Empty highways, city lights fading. That feeling when you're driving nowhere in particular.",
+        seedTrack: "Nightcall",
+        seedArtist: "Kavinsky",
+        imageUrl: "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=200",
+        creatorName: "Alex Chen",
+        trackCount: 18
+    ),
+    MockPlaylist(
+        title: "Gentle Morning",
+        description: "Sunday morning light through curtains. Coffee brewing, world still quiet.",
+        seedTrack: "Holocene",
+        seedArtist: "Bon Iver",
+        imageUrl: "https://images.unsplash.com/photo-1459749411175-04bf5292ceea?w=200",
+        creatorName: "Maya Patel",
+        trackCount: 14
+    ),
+    MockPlaylist(
+        title: "Lost in Thought",
+        description: "Walking alone through a familiar city. Every street corner holds a memory.",
+        seedTrack: "Motion Picture Soundtrack",
+        seedArtist: "Radiohead",
+        imageUrl: "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=200",
+        creatorName: "Jordan Lee",
+        trackCount: 16
+    ),
+    MockPlaylist(
+        title: "First Rain",
+        description: "That smell after the first rain. Everything feels clearer, renewed.",
+        seedTrack: "Intro",
+        seedArtist: "The xx",
+        imageUrl: "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=200",
+        creatorName: "Sam Rivers",
+        trackCount: 12
+    )
+]
+
 struct ExploreView: View {
     @EnvironmentObject var authManager: AuthManager
     
@@ -8,6 +59,7 @@ struct ExploreView: View {
     @State private var isLoading = false
     @State private var errorMessage: String?
     @State private var selectedPlaylist: Playlist?
+    @State private var selectedMockPlaylist: MockPlaylist?
     
     private let apiService = APIService.shared
     
@@ -23,14 +75,49 @@ struct ExploreView: View {
             ZStack {
                 Color.pairBackground.ignoresSafeArea()
                 
-                Group {
-                    if isLoading && allPlaylists.isEmpty {
-                        loadingView
-                    } else if allPlaylists.isEmpty {
-                        emptyStateView
-                    } else {
-                        playlistsList
+                ScrollView {
+                    VStack(spacing: 0) {
+                        // Header
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Discover")
+                                .font(.system(size: 32, weight: .bold))
+                                .foregroundColor(.pairTextPrimary)
+                            
+                            Text("Playlists curated by people with taste")
+                                .font(.body)
+                                .foregroundColor(.pairTextSecondary)
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.horizontal, 24)
+                        .padding(.top, 60)
+                        .padding(.bottom, 24)
+                        
+                        // Playlist cards
+                        LazyVStack(spacing: 20) {
+                            ForEach(mockDiscoverPlaylists) { playlist in
+                                DiscoverPlaylistCard(playlist: playlist)
+                                    .onTapGesture {
+                                        selectedMockPlaylist = playlist
+                                    }
+                            }
+                            
+                            // Also show real playlists if any
+                            ForEach(allPlaylists) { playlist in
+                                ExplorePlaylistRow(playlist: playlist)
+                                    .contentShape(Rectangle())
+                                    .onTapGesture {
+                                        selectedPlaylist = playlist
+                                    }
+                            }
+                        }
+                        .padding(.horizontal, 24)
+                        .padding(.bottom, 120)
                     }
+                }
+                
+                if isLoading && allPlaylists.isEmpty && mockDiscoverPlaylists.isEmpty {
+                    ProgressView()
+                        .tint(.pairPurple)
                 }
             }
             .navigationTitle("")
@@ -44,117 +131,6 @@ struct ExploreView: View {
             .navigationDestination(item: $selectedPlaylist) { playlist in
                 PlaylistDetailView(playlistId: playlist.id)
             }
-        }
-    }
-    
-    private var loadingView: some View {
-        VStack {
-            Spacer()
-            ProgressView()
-                .tint(.pairPurple)
-            Spacer()
-        }
-    }
-    
-    private var emptyStateView: some View {
-        VStack(spacing: 24) {
-            Spacer()
-            
-            ZStack {
-                Circle()
-                    .fill(
-                        RadialGradient(
-                            colors: [Color.pairPurple.opacity(0.15), Color.clear],
-                            center: .center,
-                            startRadius: 0,
-                            endRadius: 100
-                        )
-                    )
-                    .frame(width: 200, height: 200)
-                    .blur(radius: 30)
-                
-                Image(systemName: "globe")
-                    .font(.system(size: 64))
-                    .foregroundColor(.pairPurple.opacity(0.6))
-            }
-            
-            VStack(spacing: 8) {
-                Text("No playlists yet")
-                    .font(.title2)
-                    .fontWeight(.semibold)
-                    .foregroundColor(.white)
-                
-                Text("Be the first to create and share a playlist!")
-                    .font(.subheadline)
-                    .foregroundColor(.pairTextSecondary)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal, 32)
-            }
-            
-            if let error = errorMessage {
-                Text(error)
-                    .font(.caption)
-                    .foregroundColor(.red)
-            }
-            
-            Spacer()
-        }
-    }
-    
-    private var playlistsList: some View {
-        ScrollView {
-            VStack(spacing: 24) {
-                // Header
-                Text("Explore")
-                    .font(.system(size: 28, weight: .bold))
-                    .foregroundColor(.white)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.horizontal, 16)
-                    .padding(.top, 60)
-                
-                if !myPlaylists.isEmpty {
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text("Your Playlists")
-                            .font(.subheadline)
-                            .fontWeight(.medium)
-                            .foregroundColor(.pairTextSecondary)
-                            .padding(.horizontal, 16)
-                        
-                        LazyVStack(spacing: 0) {
-                            ForEach(myPlaylists) { playlist in
-                                ExplorePlaylistRow(playlist: playlist)
-                                    .contentShape(Rectangle())
-                                    .onTapGesture {
-                                        selectedPlaylist = playlist
-                                    }
-                            }
-                        }
-                    }
-                }
-                
-                if !publicPlaylists.isEmpty {
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text("Discover")
-                            .font(.subheadline)
-                            .fontWeight(.medium)
-                            .foregroundColor(.pairTextSecondary)
-                            .padding(.horizontal, 16)
-                        
-                        LazyVStack(spacing: 0) {
-                            ForEach(publicPlaylists.filter { pub in
-                                !myPlaylists.contains { $0.id == pub.id }
-                            }) { playlist in
-                                ExplorePlaylistRow(playlist: playlist)
-                                    .contentShape(Rectangle())
-                                    .onTapGesture {
-                                        selectedPlaylist = playlist
-                                    }
-                            }
-                        }
-                    }
-                }
-            }
-            .padding(.bottom, 100)
         }
     }
     
@@ -186,55 +162,107 @@ struct ExploreView: View {
     }
 }
 
-// MARK: - Explore Playlist Row
+// MARK: - Discover Playlist Card (Figma Design)
+struct DiscoverPlaylistCard: View {
+    let playlist: MockPlaylist
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            // Title
+            Text(playlist.title)
+                .font(.title3)
+                .fontWeight(.semibold)
+                .foregroundColor(.pairTextPrimary)
+            
+            // Description
+            Text(playlist.description)
+                .font(.subheadline)
+                .foregroundColor(.pairTextSecondary)
+                .lineLimit(2)
+            
+            // Seed track info
+            HStack(spacing: 10) {
+                AsyncImage(url: URL(string: playlist.imageUrl)) { image in
+                    image
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                } placeholder: {
+                    Rectangle()
+                        .fill(Color.pairBackgroundSecondary)
+                        .overlay {
+                            Image(systemName: "music.note")
+                                .foregroundColor(.pairTextTertiary)
+                        }
+                }
+                .frame(width: 40, height: 40)
+                .cornerRadius(6)
+                
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Seed")
+                        .font(.caption2)
+                        .foregroundColor(.pairTextTertiary)
+                    
+                    Text(playlist.seedTrack)
+                        .font(.caption)
+                        .fontWeight(.medium)
+                        .foregroundColor(.pairTextPrimary)
+                        .lineLimit(1)
+                }
+            }
+            
+            // Creator
+            Text(playlist.creatorName)
+                .font(.caption)
+                .foregroundColor(.pairTextTertiary)
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.pairCardBackground)
+        .cornerRadius(16)
+        .shadow(color: Color.black.opacity(0.05), radius: 8, y: 2)
+    }
+}
+
+// MARK: - Explore Playlist Row (for real playlists)
 struct ExplorePlaylistRow: View {
     let playlist: Playlist
     
     var body: some View {
-        HStack(spacing: 14) {
-            RoundedRectangle(cornerRadius: 8)
-                .fill(Color.pairPurple.opacity(0.2))
-                .frame(width: 56, height: 56)
-                .overlay {
-                    Image(systemName: "music.note.list")
-                        .foregroundColor(.pairPurple)
-                }
+        VStack(alignment: .leading, spacing: 12) {
+            Text(playlist.title)
+                .font(.headline)
+                .foregroundColor(.pairTextPrimary)
             
-            VStack(alignment: .leading, spacing: 4) {
-                Text(playlist.title)
-                    .font(.subheadline)
-                    .fontWeight(.medium)
-                    .foregroundColor(.white)
-                    .lineLimit(1)
-                
+            if let seedTrackName = playlist.seedTrackName {
                 HStack(spacing: 8) {
-                    if let seedTrackName = playlist.seedTrackName {
-                        Text("Seed: \(seedTrackName)")
-                            .font(.caption)
-                            .foregroundColor(.pairTextSecondary)
-                            .lineLimit(1)
-                    }
-                    
-                    if let likeCount = playlist.likeCount, likeCount > 0 {
-                        HStack(spacing: 2) {
-                            Image(systemName: "heart.fill")
-                                .font(.system(size: 10))
-                            Text("\(likeCount)")
+                    RoundedRectangle(cornerRadius: 6)
+                        .fill(Color.pairBackgroundSecondary)
+                        .frame(width: 40, height: 40)
+                        .overlay {
+                            Image(systemName: "music.note")
+                                .foregroundColor(.pairTextTertiary)
+                                .font(.system(size: 14))
                         }
-                        .font(.caption)
-                        .foregroundColor(.pairTextTertiary)
+                    
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Seed")
+                            .font(.caption2)
+                            .foregroundColor(.pairTextTertiary)
+                        
+                        Text(seedTrackName)
+                            .font(.caption)
+                            .fontWeight(.medium)
+                            .foregroundColor(.pairTextPrimary)
+                            .lineLimit(1)
                     }
                 }
             }
-            
-            Spacer()
-            
-            Image(systemName: "chevron.right")
-                .font(.system(size: 14))
-                .foregroundColor(.pairTextTertiary)
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.pairCardBackground)
+        .cornerRadius(16)
+        .shadow(color: Color.black.opacity(0.05), radius: 8, y: 2)
     }
 }
 

@@ -1,5 +1,43 @@
 import SwiftUI
 
+// MARK: - Mock Profile Data for Design
+struct MockProfilePlaylist: Identifiable {
+    let id = UUID()
+    let title: String
+    let description: String
+    let seedTrack: String
+    let seedArtist: String
+    let imageUrl: String
+    let trackCount: Int
+}
+
+let mockProfilePlaylists = [
+    MockProfilePlaylist(
+        title: "Late Night Drive",
+        description: "Empty highways, city lights fading. That feeling when you're driving nowhere in particular.",
+        seedTrack: "Midnight City",
+        seedArtist: "M83",
+        imageUrl: "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=200",
+        trackCount: 18
+    ),
+    MockProfilePlaylist(
+        title: "Sunday Morning",
+        description: "Coffee brewing. Light through curtains. The world hasn't woken up yet.",
+        seedTrack: "Holocene",
+        seedArtist: "Bon Iver",
+        imageUrl: "https://images.unsplash.com/photo-1459749411175-04bf5292ceea?w=200",
+        trackCount: 14
+    ),
+    MockProfilePlaylist(
+        title: "Rainy Afternoon",
+        description: "Windows fogged. The kind of rain that makes you want to stay inside all day.",
+        seedTrack: "Breathe",
+        seedArtist: "Telepopmusik",
+        imageUrl: "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=200",
+        trackCount: 20
+    )
+]
+
 struct ProfileView: View {
     let userId: String?
     
@@ -24,14 +62,111 @@ struct ProfileView: View {
             ZStack {
                 Color.pairBackground.ignoresSafeArea()
                 
-                Group {
-                    if isLoading && profile == nil {
-                        loadingView
-                    } else if let profile = profile {
-                        profileContent(profile)
-                    } else {
-                        errorView
+                ScrollView {
+                    VStack(spacing: 0) {
+                        // Header with back and settings
+                        HStack {
+                            Button {
+                                // Back action - handled by navigation
+                            } label: {
+                                HStack(spacing: 4) {
+                                    Image(systemName: "arrow.left")
+                                        .font(.system(size: 16))
+                                    Text("Back")
+                                        .font(.subheadline)
+                                }
+                                .foregroundColor(.pairTextSecondary)
+                            }
+                            
+                            Spacer()
+                            
+                            if isOwnProfile {
+                                Menu {
+                                    Button {
+                                        showEditProfile = true
+                                    } label: {
+                                        Label("Edit Profile", systemImage: "pencil")
+                                    }
+                                    
+                                    Button(role: .destructive) {
+                                        authManager.signOut()
+                                    } label: {
+                                        Label("Sign Out", systemImage: "rectangle.portrait.and.arrow.right")
+                                    }
+                                } label: {
+                                    Image(systemName: "gearshape")
+                                        .font(.system(size: 20))
+                                        .foregroundColor(.pairTextSecondary)
+                                }
+                            }
+                        }
+                        .padding(.horizontal, 24)
+                        .padding(.top, 60)
+                        .padding(.bottom, 24)
+                        
+                        // Profile avatar and info
+                        VStack(spacing: 12) {
+                            // Avatar placeholder
+                            Circle()
+                                .stroke(Color.pairCardBorder, lineWidth: 1)
+                                .frame(width: 80, height: 80)
+                                .overlay {
+                                    Image(systemName: "person")
+                                        .font(.system(size: 32))
+                                        .foregroundColor(.pairTextTertiary)
+                                }
+                            
+                            // Name
+                            Text("Jordan Moss")
+                                .font(.system(size: 28, weight: .bold))
+                                .foregroundColor(.pairTextPrimary)
+                            
+                            // Pairing count
+                            Text("12 pairings")
+                                .font(.subheadline)
+                                .foregroundColor(.pairTextSecondary)
+                            
+                            // Bio
+                            Text("Music for late drives and early mornings")
+                                .font(.body)
+                                .foregroundColor(.pairTextSecondary)
+                                .multilineTextAlignment(.center)
+                                .padding(.horizontal, 40)
+                        }
+                        .padding(.bottom, 32)
+                        
+                        // Published Pairings section
+                        VStack(alignment: .leading, spacing: 16) {
+                            Text("Published Pairings")
+                                .font(.headline)
+                                .foregroundColor(.pairTextPrimary)
+                                .padding(.horizontal, 24)
+                            
+                            LazyVStack(spacing: 16) {
+                                ForEach(mockProfilePlaylists) { playlist in
+                                    ProfilePlaylistCard(playlist: playlist)
+                                }
+                                
+                                // Also show real playlists if any
+                                if let realProfile = profile, let playlists = realProfile.playlists {
+                                    ForEach(playlists) { playlist in
+                                        ProfilePlaylistRow(playlist: playlist)
+                                            .contentShape(Rectangle())
+                                            .onTapGesture {
+                                                selectedPlaylist = playlist
+                                            }
+                                    }
+                                }
+                            }
+                            .padding(.horizontal, 24)
+                        }
+                        .padding(.bottom, 120)
                     }
+                }
+                
+                if isLoading && profile == nil {
+                    ProgressView()
+                        .tint(.pairPurple)
                 }
             }
             .navigationTitle("")
@@ -49,218 +184,6 @@ struct ProfileView: View {
                 EditProfileSheet(profile: profile) {
                     Task { await loadProfile() }
                 }
-            }
-        }
-    }
-    
-    private var loadingView: some View {
-        VStack {
-            Spacer()
-            ProgressView()
-                .tint(.pairPurple)
-            Spacer()
-        }
-    }
-    
-    private var errorView: some View {
-        VStack(spacing: 24) {
-            Spacer()
-            
-            Image(systemName: "person.crop.circle.badge.exclamationmark")
-                .font(.system(size: 64))
-                .foregroundColor(.pairTextSecondary)
-            
-            VStack(spacing: 8) {
-                Text("Profile not found")
-                    .font(.title2)
-                    .fontWeight(.semibold)
-                    .foregroundColor(.white)
-                
-                if let error = errorMessage {
-                    Text(error)
-                        .font(.caption)
-                        .foregroundColor(.red)
-                }
-            }
-            
-            Spacer()
-        }
-    }
-    
-    private func profileContent(_ profile: Profile) -> some View {
-        ScrollView {
-            VStack(spacing: 24) {
-                // Header with settings
-                HStack {
-                    Text("Profile")
-                        .font(.system(size: 28, weight: .bold))
-                        .foregroundColor(.white)
-                    
-                    Spacer()
-                    
-                    if isOwnProfile {
-                        Menu {
-                            Button {
-                                showEditProfile = true
-                            } label: {
-                                Label("Edit Profile", systemImage: "pencil")
-                            }
-                            
-                            Button(role: .destructive) {
-                                authManager.signOut()
-                            } label: {
-                                Label("Sign Out", systemImage: "rectangle.portrait.and.arrow.right")
-                            }
-                        } label: {
-                            Image(systemName: "gearshape")
-                                .font(.system(size: 20))
-                                .foregroundColor(.pairTextSecondary)
-                        }
-                    }
-                }
-                .padding(.horizontal, 16)
-                .padding(.top, 60)
-                
-                profileHeader(profile)
-                
-                statsSection(profile)
-                
-                if !isOwnProfile {
-                    followButton
-                }
-                
-                playlistsSection(profile)
-            }
-            .padding(.bottom, 100)
-        }
-    }
-    
-    private func profileHeader(_ profile: Profile) -> some View {
-        VStack(spacing: 16) {
-            AsyncImage(url: URL(string: profile.avatarUrl ?? "")) { image in
-                image
-                    .resizable()
-                    .aspectRatio(contentMode: .fill)
-            } placeholder: {
-                Circle()
-                    .fill(Color.pairPurple.opacity(0.2))
-                    .overlay {
-                        Image(systemName: "person.fill")
-                            .font(.system(size: 40))
-                            .foregroundColor(.pairPurple)
-                    }
-            }
-            .frame(width: 100, height: 100)
-            .clipShape(Circle())
-            
-            VStack(spacing: 6) {
-                Text(profile.displayName ?? profile.username)
-                    .font(.title2)
-                    .fontWeight(.bold)
-                    .foregroundColor(.white)
-                
-                Text("@\(profile.username)")
-                    .font(.subheadline)
-                    .foregroundColor(.pairTextSecondary)
-                
-                if let bio = profile.bio, !bio.isEmpty {
-                    Text(bio)
-                        .font(.subheadline)
-                        .foregroundColor(.pairTextSecondary)
-                        .multilineTextAlignment(.center)
-                        .padding(.top, 4)
-                }
-            }
-        }
-        .padding(.horizontal, 16)
-    }
-    
-    private func statsSection(_ profile: Profile) -> some View {
-        HStack(spacing: 0) {
-            VStack(spacing: 4) {
-                Text("\(profile.playlists?.count ?? 0)")
-                    .font(.title3)
-                    .fontWeight(.bold)
-                    .foregroundColor(.white)
-                Text("Playlists")
-                    .font(.caption)
-                    .foregroundColor(.pairTextSecondary)
-            }
-            .frame(maxWidth: .infinity)
-            
-            VStack(spacing: 4) {
-                Text("\(profile.followerCount ?? 0)")
-                    .font(.title3)
-                    .fontWeight(.bold)
-                    .foregroundColor(.white)
-                Text("Followers")
-                    .font(.caption)
-                    .foregroundColor(.pairTextSecondary)
-            }
-            .frame(maxWidth: .infinity)
-            
-            VStack(spacing: 4) {
-                Text("\(profile.followingCount ?? 0)")
-                    .font(.title3)
-                    .fontWeight(.bold)
-                    .foregroundColor(.white)
-                Text("Following")
-                    .font(.caption)
-                    .foregroundColor(.pairTextSecondary)
-            }
-            .frame(maxWidth: .infinity)
-        }
-        .padding(.vertical, 20)
-        .background(Color.white.opacity(0.05))
-        .cornerRadius(16)
-        .padding(.horizontal, 16)
-    }
-    
-    private var followButton: some View {
-        Button {
-            toggleFollow()
-        } label: {
-            Text(isFollowing ? "Following" : "Follow")
-                .fontWeight(.semibold)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 14)
-                .background(isFollowing ? Color.white.opacity(0.1) : Color.pairPurple)
-                .foregroundColor(.white)
-                .cornerRadius(12)
-        }
-        .padding(.horizontal, 16)
-    }
-    
-    private func playlistsSection(_ profile: Profile) -> some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text("Playlists")
-                .font(.subheadline)
-                .fontWeight(.medium)
-                .foregroundColor(.pairTextSecondary)
-                .padding(.horizontal, 16)
-            
-            if let playlists = profile.playlists, !playlists.isEmpty {
-                LazyVStack(spacing: 0) {
-                    ForEach(playlists) { playlist in
-                        ProfilePlaylistRow(playlist: playlist)
-                            .contentShape(Rectangle())
-                            .onTapGesture {
-                                selectedPlaylist = playlist
-                            }
-                    }
-                }
-            } else {
-                VStack(spacing: 12) {
-                    Image(systemName: "music.note.list")
-                        .font(.system(size: 32))
-                        .foregroundColor(.pairTextTertiary)
-                    
-                    Text("No playlists yet")
-                        .font(.subheadline)
-                        .foregroundColor(.pairTextSecondary)
-                }
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 32)
             }
         }
     }
@@ -422,43 +345,102 @@ struct EditProfileSheet: View {
     }
 }
 
-// MARK: - Profile Playlist Row
+// MARK: - Profile Playlist Card (for mock data)
+struct ProfilePlaylistCard: View {
+    let playlist: MockProfilePlaylist
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            // Title
+            Text(playlist.title)
+                .font(.title3)
+                .fontWeight(.semibold)
+                .foregroundColor(.pairTextPrimary)
+            
+            // Description
+            Text(playlist.description)
+                .font(.subheadline)
+                .foregroundColor(.pairTextSecondary)
+                .lineLimit(2)
+            
+            // Seed track info
+            HStack(spacing: 10) {
+                AsyncImage(url: URL(string: playlist.imageUrl)) { image in
+                    image
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                } placeholder: {
+                    Rectangle()
+                        .fill(Color.pairBackgroundSecondary)
+                        .overlay {
+                            Image(systemName: "music.note")
+                                .foregroundColor(.pairTextTertiary)
+                        }
+                }
+                .frame(width: 40, height: 40)
+                .cornerRadius(6)
+                
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Seed")
+                        .font(.caption2)
+                        .foregroundColor(.pairTextTertiary)
+                    
+                    Text(playlist.seedTrack)
+                        .font(.caption)
+                        .fontWeight(.medium)
+                        .foregroundColor(.pairTextPrimary)
+                        .lineLimit(1)
+                }
+            }
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.pairCardBackground)
+        .cornerRadius(16)
+        .shadow(color: Color.black.opacity(0.05), radius: 8, y: 2)
+    }
+}
+
+// MARK: - Profile Playlist Row (for real playlists)
 struct ProfilePlaylistRow: View {
     let playlist: Playlist
     
     var body: some View {
-        HStack(spacing: 14) {
-            RoundedRectangle(cornerRadius: 8)
-                .fill(Color.pairPurple.opacity(0.2))
-                .frame(width: 56, height: 56)
-                .overlay {
-                    Image(systemName: "music.note.list")
-                        .foregroundColor(.pairPurple)
-                }
+        VStack(alignment: .leading, spacing: 12) {
+            Text(playlist.title)
+                .font(.headline)
+                .foregroundColor(.pairTextPrimary)
             
-            VStack(alignment: .leading, spacing: 4) {
-                Text(playlist.title)
-                    .font(.subheadline)
-                    .fontWeight(.medium)
-                    .foregroundColor(.white)
-                    .lineLimit(1)
-                
-                if let seedTrackName = playlist.seedTrackName {
-                    Text("Seed: \(seedTrackName)")
-                        .font(.caption)
-                        .foregroundColor(.pairTextSecondary)
-                        .lineLimit(1)
+            if let seedTrackName = playlist.seedTrackName {
+                HStack(spacing: 8) {
+                    RoundedRectangle(cornerRadius: 6)
+                        .fill(Color.pairBackgroundSecondary)
+                        .frame(width: 40, height: 40)
+                        .overlay {
+                            Image(systemName: "music.note")
+                                .foregroundColor(.pairTextTertiary)
+                                .font(.system(size: 14))
+                        }
+                    
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Seed")
+                            .font(.caption2)
+                            .foregroundColor(.pairTextTertiary)
+                        
+                        Text(seedTrackName)
+                            .font(.caption)
+                            .fontWeight(.medium)
+                            .foregroundColor(.pairTextPrimary)
+                            .lineLimit(1)
+                    }
                 }
             }
-            
-            Spacer()
-            
-            Image(systemName: "chevron.right")
-                .font(.system(size: 14))
-                .foregroundColor(.pairTextTertiary)
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.pairCardBackground)
+        .cornerRadius(16)
+        .shadow(color: Color.black.opacity(0.05), radius: 8, y: 2)
     }
 }
 

@@ -6,9 +6,12 @@ extension Color {
     static let pairPurple = Color(hex: "9b87f5")
     static let pairPurpleDark = Color(hex: "7c6bd4")
     
-    // Background colors
-    static let pairBackground = Color(hex: "1a1625")
-    static let pairBackgroundLight = Color(hex: "2d2640")
+    // Background colors - Dark (for login only)
+    static let pairBackgroundDark = Color(hex: "1a1625")
+    
+    // Background colors - Light (for main app screens)
+    static let pairBackground = Color(hex: "fafafa")
+    static let pairBackgroundSecondary = Color(hex: "f5f5f5")
     
     // Mood colors for songs
     static let moodPink = Color(hex: "e67e9f")      // Warm nostalgic
@@ -16,20 +19,29 @@ extension Color {
     static let moodPurple = Color(hex: "8b7fc9")    // Moody
     static let moodTeal = Color(hex: "5d9b8f")      // Dark teal
     
-    // Gradient orb colors
+    // Gradient orb colors (for login screen)
     static let orbPurple = Color(hex: "9b87f5").opacity(0.6)
     static let orbOrange = Color(hex: "f5a962").opacity(0.5)
     static let orbTeal = Color(hex: "62c4b5").opacity(0.5)
     static let orbMagenta = Color(hex: "c962b5").opacity(0.5)
     
-    // Glass morphism
+    // Glass morphism (for login screen)
     static let glassBackground = Color.white.opacity(0.1)
     static let glassBorder = Color.white.opacity(0.2)
     
-    // Text colors
-    static let pairTextPrimary = Color.white
-    static let pairTextSecondary = Color.white.opacity(0.6)
-    static let pairTextTertiary = Color.white.opacity(0.35)
+    // Text colors - Light theme (main app)
+    static let pairTextPrimary = Color(hex: "1a1a1a")
+    static let pairTextSecondary = Color(hex: "666666")
+    static let pairTextTertiary = Color(hex: "999999")
+    
+    // Text colors - Dark theme (login only)
+    static let pairTextPrimaryDark = Color.white
+    static let pairTextSecondaryDark = Color.white.opacity(0.6)
+    static let pairTextTertiaryDark = Color.white.opacity(0.35)
+    
+    // Card colors
+    static let pairCardBackground = Color.white
+    static let pairCardBorder = Color(hex: "e5e5e5")
 }
 
 // MARK: - Color Hex Initializer
@@ -80,7 +92,7 @@ struct PairLogo: View {
     }
 }
 
-// MARK: - Animated Gradient Background
+// MARK: - Animated Gradient Background (Login screen only)
 struct AnimatedGradientBackground: View {
     @State private var animateOrb1 = false
     @State private var animateOrb2 = false
@@ -89,7 +101,7 @@ struct AnimatedGradientBackground: View {
     
     var body: some View {
         ZStack {
-            Color.pairBackground
+            Color.pairBackgroundDark
                 .ignoresSafeArea()
             
             // Purple orb
@@ -272,53 +284,46 @@ struct FloatingNavBar: View {
     
     var body: some View {
         HStack(spacing: 0) {
-            // Discover
+            // Discover (compass icon)
             NavBarItem(
-                icon: "magnifyingglass",
-                label: "Discover",
+                icon: "safari",
                 isSelected: selectedTab == 0
             ) {
                 selectedTab = 0
             }
             
-            // Create (center, larger)
+            // Create (center, larger with + icon)
             Button {
                 selectedTab = 1
             } label: {
                 ZStack {
                     Circle()
-                        .fill(selectedTab == 1 ? Color.pairPurple : Color.white.opacity(0.1))
-                        .frame(width: 58, height: 58)
-                        .shadow(color: selectedTab == 1 ? Color.pairPurple.opacity(0.5) : Color.clear, radius: 12)
+                        .fill(selectedTab == 1 ? Color.pairPurple : Color(hex: "f0f0f0"))
+                        .frame(width: 52, height: 52)
+                        .shadow(color: selectedTab == 1 ? Color.pairPurple.opacity(0.3) : Color.black.opacity(0.1), radius: 8, y: 2)
                     
-                    Image(systemName: "plus")
-                        .font(.system(size: 24, weight: .medium))
+                    Image(systemName: selectedTab == 1 ? "xmark" : "plus")
+                        .font(.system(size: 22, weight: .medium))
                         .foregroundColor(selectedTab == 1 ? .white : .pairTextSecondary)
-                        .rotationEffect(.degrees(selectedTab == 1 ? 45 : 0))
                 }
-                .scaleEffect(isBreathing ? 1.05 : 1.0)
+                .scaleEffect(isBreathing && selectedTab != 1 ? 1.03 : 1.0)
             }
-            .padding(.horizontal, 16)
+            .padding(.horizontal, 20)
             
-            // Profile
+            // Profile (person icon)
             NavBarItem(
                 icon: "person",
-                label: "Profile",
                 isSelected: selectedTab == 2
             ) {
                 selectedTab = 2
             }
         }
-        .padding(.horizontal, 24)
-        .padding(.vertical, 12)
+        .padding(.horizontal, 20)
+        .padding(.vertical, 10)
         .background(
             Capsule()
-                .fill(.ultraThinMaterial)
-                .shadow(color: Color.black.opacity(0.2), radius: 20, y: 10)
-        )
-        .overlay(
-            Capsule()
-                .stroke(Color.white.opacity(0.1), lineWidth: 1)
+                .fill(Color.white)
+                .shadow(color: Color.black.opacity(0.12), radius: 16, y: 4)
         )
         .onAppear {
             withAnimation(.easeInOut(duration: 3).repeatForever(autoreverses: true)) {
@@ -330,22 +335,15 @@ struct FloatingNavBar: View {
 
 struct NavBarItem: View {
     let icon: String
-    let label: String
     let isSelected: Bool
     let action: () -> Void
     
     var body: some View {
         Button(action: action) {
-            VStack(spacing: 4) {
-                Image(systemName: icon)
-                    .font(.system(size: 20))
-                    .foregroundColor(isSelected ? .pairPurple : .pairTextSecondary)
-                
-                Text(label)
-                    .font(.caption2)
-                    .foregroundColor(isSelected ? .pairPurple : .pairTextSecondary)
-            }
-            .frame(width: 52, height: 52)
+            Image(systemName: icon)
+                .font(.system(size: 22))
+                .foregroundColor(isSelected ? .pairPurple : .pairTextTertiary)
+                .frame(width: 44, height: 44)
         }
     }
 }
