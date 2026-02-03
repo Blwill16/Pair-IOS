@@ -1,7 +1,26 @@
 import SwiftUI
 
+// MARK: - Navigation State
+// Tracks whether the floating nav bar should be visible
+class NavigationState: ObservableObject {
+    @Published var isNavBarVisible: Bool = true
+    
+    func hideNavBar() {
+        withAnimation(.easeOut(duration: 0.2)) {
+            isNavBarVisible = false
+        }
+    }
+    
+    func showNavBar() {
+        withAnimation(.easeIn(duration: 0.2)) {
+            isNavBarVisible = true
+        }
+    }
+}
+
 struct ContentView: View {
     @EnvironmentObject var authManager: AuthManager
+    @StateObject private var navigationState = NavigationState()
     @State private var selectedTab = 0
     
     var body: some View {
@@ -26,9 +45,14 @@ struct ContentView: View {
                         .tag(2)
                 }
                 .tabViewStyle(.page(indexDisplayMode: .never))
+                .environmentObject(navigationState)
                 
-                FloatingNavBar(selectedTab: $selectedTab)
-                    .padding(.bottom, 20)
+                // Floating nav bar - hidden on detail screens
+                if navigationState.isNavBarVisible {
+                    FloatingNavBar(selectedTab: $selectedTab)
+                        .padding(.bottom, 20)
+                        .transition(.move(edge: .bottom).combined(with: .opacity))
+                }
             }
             .ignoresSafeArea(.keyboard)
         }

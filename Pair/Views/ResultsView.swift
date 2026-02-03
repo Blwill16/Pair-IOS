@@ -7,6 +7,7 @@ struct ResultsView: View {
     
     @EnvironmentObject var authManager: AuthManager
     @EnvironmentObject var audioPlayer: AudioPlayer
+    @EnvironmentObject var navigationState: NavigationState
     @Environment(\.dismiss) private var dismiss
     
     @State private var savedTrackIds: Set<String> = []
@@ -47,6 +48,12 @@ struct ResultsView: View {
             Button("OK", role: .cancel) {}
         } message: {
             Text("Your playlist has been saved and published!")
+        }
+        .onAppear {
+            navigationState.hideNavBar()
+        }
+        .onDisappear {
+            navigationState.showNavBar()
         }
     }
     

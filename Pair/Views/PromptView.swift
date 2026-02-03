@@ -1,5 +1,37 @@
 import SwiftUI
 
+// MARK: - Mood Color Helper
+// Maps songs to mood colors based on their characteristics
+struct MoodColorHelper {
+    // Mood colors from Figma design
+    static let warmPink = Color(hex: "e67e9f")      // Warm nostalgic (Midnight City)
+    static let coolBlue = Color(hex: "6ba3c9")      // Cool ethereal (Holocene)
+    static let moodyPurple = Color(hex: "8b7fc9")   // Moody (Intro)
+    static let darkTeal = Color(hex: "5d9b8f")      // Dark teal (Teardrop)
+    
+    // Get mood color based on track name/artist
+    static func getMoodColor(for track: SpotifyTrack) -> Color {
+        let name = track.trackName.lowercased()
+        let artist = track.artistName.lowercased()
+        
+        // Map specific songs to their mood colors
+        if name.contains("midnight") || artist.contains("m83") {
+            return warmPink
+        } else if name.contains("holocene") || artist.contains("bon iver") {
+            return coolBlue
+        } else if name.contains("intro") || artist.contains("xx") {
+            return moodyPurple
+        } else if name.contains("teardrop") || artist.contains("massive attack") {
+            return darkTeal
+        }
+        
+        // Default: use a hash of the track name to pick a consistent color
+        let hash = abs(track.trackName.hashValue)
+        let colors = [warmPink, coolBlue, moodyPurple, darkTeal]
+        return colors[hash % colors.count]
+    }
+}
+
 struct PromptView: View {
     let seedTrack: SpotifyTrack
     var initialPrompt: String? = nil
@@ -7,6 +39,7 @@ struct PromptView: View {
     
     @EnvironmentObject var authManager: AuthManager
     @EnvironmentObject var audioPlayer: AudioPlayer
+    @EnvironmentObject var navigationState: NavigationState
     @Environment(\.dismiss) private var dismiss
     
     @State private var promptText = ""
@@ -16,24 +49,152 @@ struct PromptView: View {
     @State private var showResults = false
     @State private var errorMessage: String?
     @State private var animateButton = false
-    @State private var isVibeReady = false
     
     private let apiService = APIService.shared
     private let hapticFeedback = UIImpactFeedbackGenerator(style: .medium)
+    
+    // Computed mood color based on the seed track
+    private var moodColor: Color {
+        MoodColorHelper.getMoodColor(for: seedTrack)
+    }
     
     var body: some View {
         ZStack {
             Color.pairBackground.ignoresSafeArea()
             
             ScrollView {
-                VStack(spacing: 28) {
-                    seedTrackCard
+                VStack(spacing: 0) {
+                    // Header
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Create a Pairing")
+                            .font(.system(size: 32, weight: .bold))
+                            .foregroundColor(.pairTextPrimary)
+                        
+                        Text("Find music that resonates")
+                            .font(.body)
+                            .foregroundColor(.pairTextSecondary)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, 24)
+                    .padding(.top, 20)
+                    .padding(.bottom, 24)
                     
-                    promptSection
+                    // Album art - large and centered
+                    AsyncImage(url: URL(string: seedTrack.albumArtUrl ?? "")) { image in
+                        image
+                            .resizable()
+                            .aspectRatio(contentMode: .fill)
+                    } placeholder: {
+                        Rectangle()
+                            .fill(Color.pairBackgroundSecondary)
+                            .overlay {
+                                Image(systemName: "music.note")
+                                    .font(.system(size: 48))
+                                    .foregroundColor(.pairTextTertiary)
+                            }
+                    }
+                    .frame(width: 200, height: 200)
+                    .cornerRadius(16)
+                    .padding(.bottom, 20)
                     
-                    modeSelector
+                    // Song title and artist - centered
+                    VStack(spacing: 4) {
+                        Text(seedTrack.trackName)
+                            .font(.title2)
+                            .fontWeight(.bold)
+                            .foregroundColor(.pairTextPrimary)
+                            .multilineTextAlignment(.center)
+                        
+                        Text(seedTrack.artistName)
+                            .font(.body)
+                            .foregroundColor(.pairTextSecondary)
+                    }
+                    .padding(.bottom, 32)
                     
-                    generateButton
+                    // "What does this song feel like?" label
+                    Text("What does this song feel like?")
+                        .font(.subheadline)
+                        .italic()
+                        .foregroundColor(.pairTextSecondary)
+                        .padding(.bottom, 12)
+                    
+                    // Text field
+                    TextField("", text: $promptText, prompt: Text("Late night drive")
+                        .foregroundColor(.pairTextTertiary))
+                        .font(.body)
+                        .foregroundColor(.pairTextPrimary)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 20)
+                        .padding(.vertical, 18)
+                        .background(
+                            RoundedRectangle(cornerRadius: 16)
+                                .fill(Color.pairBackgroundSecondary)
+                        )
+                        .padding(.horizontal, 24)
+                        .padding(.bottom, 32)
+                    
+                    // "Pairing approach" label - centered
+                    Text("Pairing approach")
+                        .font(.subheadline)
+                        .foregroundColor(.pairTextSecondary)
+                        .padding(.bottom, 16)
+                    
+                    // 2x2 Grid of mode cards
+                    LazyVGrid(columns: [
+                        GridItem(.flexible(), spacing: 12),
+                        GridItem(.flexible(), spacing: 12)
+                    ], spacing: 12) {
+                        ForEach(PairingMode.allCases, id: \.self) { mode in
+                            ModeCard(
+                                mode: mode,
+                                isSelected: selectedMode == mode,
+                                moodColor: moodColor,
+                                action: {
+                                    withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                                        selectedMode = mode
+                                    }
+                                    hapticFeedback.impactOccurred()
+                                }
+                            )
+                        }
+                    }
+                    .padding(.horizontal, 24)
+                    .padding(.bottom, 40)
+                    
+                    // Generate button - uses mood color
+                    Button {
+                        hapticFeedback.impactOccurred()
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
+                            animateButton = true
+                        }
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                            animateButton = false
+                        }
+                        generatePairing()
+                    } label: {
+                        HStack(spacing: 8) {
+                            if isGenerating {
+                                ProgressView()
+                                    .tint(.white)
+                            } else {
+                                Text("Generate Pairing")
+                                    .fontWeight(.semibold)
+                                Image(systemName: "chevron.right")
+                                    .font(.system(size: 14, weight: .semibold))
+                            }
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 18)
+                        .background(
+                            RoundedRectangle(cornerRadius: 28)
+                                .fill(moodColor)
+                        )
+                        .foregroundColor(.white)
+                        .scaleEffect(animateButton ? 0.97 : 1.0)
+                    }
+                    .disabled(isGenerating)
+                    .padding(.horizontal, 24)
+                    .padding(.bottom, 40)
                     
                     if let error = errorMessage {
                         Text(error)
@@ -42,18 +203,11 @@ struct PromptView: View {
                             .padding()
                     }
                 }
-                .padding()
-                .padding(.top, 12)
             }
         }
         .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
-        .navigationBarBackButtonHidden(true)
-        .toolbar {
-            ToolbarItem(placement: .navigationBarLeading) {
-                PairBackButton()
-            }
-        }
+        .navigationBarBackButtonHidden(false)
         .navigationDestination(isPresented: $showResults) {
             if let response = pairResponse {
                 ResultsView(
@@ -61,13 +215,12 @@ struct PromptView: View {
                     promptText: promptText,
                     mode: selectedMode
                 )
-                .transition(.asymmetric(
-                    insertion: .move(edge: .trailing).combined(with: .opacity),
-                    removal: .move(edge: .leading).combined(with: .opacity)
-                ))
             }
         }
         .onAppear {
+            // Hide nav bar on detail screens
+            navigationState.hideNavBar()
+            
             if let prompt = initialPrompt {
                 promptText = prompt
             }
@@ -75,192 +228,10 @@ struct PromptView: View {
                 selectedMode = mode
             }
         }
-        .onChange(of: promptText) { _, newValue in
-            withAnimation(.easeInOut(duration: 0.3)) {
-                isVibeReady = !newValue.isEmpty
-            }
+        .onDisappear {
+            // Show nav bar when returning to main screens
+            navigationState.showNavBar()
         }
-    }
-    
-    private var seedTrackCard: some View {
-        VStack(spacing: 16) {
-            HStack(spacing: 16) {
-                AsyncImage(url: URL(string: seedTrack.albumArtUrl ?? "")) { image in
-                    image
-                        .resizable()
-                        .aspectRatio(contentMode: .fill)
-                } placeholder: {
-                    Rectangle()
-                        .fill(Color.white.opacity(0.1))
-                        .overlay {
-                            Image(systemName: "music.note")
-                                .foregroundColor(.pairTextTertiary)
-                        }
-                }
-                .frame(width: 100, height: 100)
-                .cornerRadius(12)
-                .shadow(color: Color.pairPurple.opacity(isVibeReady ? 0.4 : 0), radius: 20)
-                .scaleEffect(isVibeReady ? 1.02 : 1.0)
-                .animation(.easeInOut(duration: 2.5).repeatForever(autoreverses: true), value: isVibeReady)
-                
-                VStack(alignment: .leading, spacing: 6) {
-                    Text(seedTrack.trackName)
-                        .font(.headline)
-                        .foregroundColor(.white)
-                        .lineLimit(2)
-                    
-                    Text(seedTrack.artistName)
-                        .font(.subheadline)
-                        .foregroundColor(.pairTextSecondary)
-                }
-                
-                Spacer()
-                
-                if let previewUrl = seedTrack.previewUrl {
-                    Button {
-                        hapticFeedback.impactOccurred()
-                        audioPlayer.play(url: previewUrl, trackId: seedTrack.trackId)
-                    } label: {
-                        Image(systemName: audioPlayer.currentTrackId == seedTrack.trackId && audioPlayer.isPlaying ? "pause.circle.fill" : "play.circle.fill")
-                            .font(.system(size: 48))
-                            .foregroundColor(.pairPurple)
-                    }
-                }
-            }
-            .padding(20)
-            .background(Color.white.opacity(0.05))
-            .cornerRadius(16)
-            .overlay(
-                RoundedRectangle(cornerRadius: 16)
-                    .stroke(Color.white.opacity(0.1), lineWidth: 1)
-            )
-        }
-    }
-    
-    private var promptSection: some View {
-        VStack(spacing: 16) {
-            // Poetic prompt
-            Text("What does this song feel like?")
-                .font(.subheadline)
-                .italic()
-                .foregroundColor(.pairTextSecondary)
-                .frame(maxWidth: .infinity, alignment: .center)
-            
-            TextField("", text: $promptText, prompt: Text("late night drive, summer memories...")
-                .foregroundColor(.pairTextTertiary), axis: .vertical)
-                .foregroundColor(.white)
-                .multilineTextAlignment(.center)
-                .lineLimit(2...4)
-                .padding(.horizontal, 20)
-                .padding(.vertical, 16)
-                .background(
-                    RoundedRectangle(cornerRadius: 16)
-                        .fill(Color.white.opacity(0.05))
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: 16)
-                        .stroke(isVibeReady ? Color.pairPurple.opacity(0.5) : Color.white.opacity(0.1), lineWidth: 1)
-                )
-        }
-    }
-    
-    private var modeSelector: some View {
-        VStack(spacing: 16) {
-            Text("Pairing approach")
-                .font(.subheadline)
-                .fontWeight(.medium)
-                .foregroundColor(.pairTextSecondary)
-                .frame(maxWidth: .infinity, alignment: .leading)
-            
-            VStack(spacing: 10) {
-                ForEach(PairingMode.allCases, id: \.self) { mode in
-                    Button {
-                        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                            selectedMode = mode
-                        }
-                        hapticFeedback.impactOccurred()
-                    } label: {
-                        HStack {
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text(mode.displayName)
-                                    .font(.subheadline)
-                                    .fontWeight(.medium)
-                                    .foregroundColor(.white)
-                                
-                                Text(modeSubtitle(mode))
-                                    .font(.caption)
-                                    .foregroundColor(.pairTextSecondary)
-                            }
-                            
-                            Spacer()
-                            
-                            if selectedMode == mode {
-                                Circle()
-                                    .fill(Color.pairPurple)
-                                    .frame(width: 8, height: 8)
-                            }
-                        }
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 14)
-                        .background(
-                            RoundedRectangle(cornerRadius: 12)
-                                .fill(selectedMode == mode ? Color.pairPurple.opacity(0.15) : Color.white.opacity(0.05))
-                        )
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 12)
-                                .stroke(selectedMode == mode ? Color.pairPurple.opacity(0.5) : Color.white.opacity(0.1), lineWidth: 1)
-                        )
-                        .shadow(color: selectedMode == mode ? Color.pairPurple.opacity(0.2) : Color.clear, radius: 8)
-                    }
-                    .buttonStyle(.plain)
-                }
-            }
-        }
-    }
-    
-    private func modeSubtitle(_ mode: PairingMode) -> String {
-        switch mode {
-        case .sameSound: return "sonically close"
-        case .sameVibe: return "emotionally aligned"
-        case .sameScene: return "same place, different song"
-        case .adventure: return "surprise me"
-        }
-    }
-    
-    private var generateButton: some View {
-        Button {
-            hapticFeedback.impactOccurred()
-            withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
-                animateButton = true
-            }
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
-                animateButton = false
-            }
-            generatePairing()
-        } label: {
-            HStack(spacing: 12) {
-                if isGenerating {
-                    ProgressView()
-                        .tint(.white)
-                } else {
-                    Image(systemName: "waveform")
-                        .font(.system(size: 18))
-                    Text("Generate Pairing")
-                        .fontWeight(.semibold)
-                }
-            }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 18)
-            .background(
-                RoundedRectangle(cornerRadius: 14)
-                    .fill(Color.pairPurple)
-                    .shadow(color: Color.pairPurple.opacity(isVibeReady ? 0.5 : 0.3), radius: isVibeReady ? 16 : 8)
-            )
-            .foregroundColor(.white)
-            .scaleEffect(animateButton ? 0.97 : 1.0)
-        }
-        .disabled(isGenerating)
-        .padding(.top, 8)
     }
     
     private func generatePairing() {
@@ -291,13 +262,56 @@ struct PromptView: View {
     }
 }
 
+// MARK: - Mode Card (2x2 Grid Item)
+struct ModeCard: View {
+    let mode: PairingMode
+    let isSelected: Bool
+    let moodColor: Color
+    let action: () -> Void
+    
+    var body: some View {
+        Button(action: action) {
+            VStack(spacing: 4) {
+                Text(mode.displayName)
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+                    .foregroundColor(isSelected ? .white : .pairTextPrimary)
+                
+                Text(modeSubtitle)
+                    .font(.caption)
+                    .foregroundColor(isSelected ? .white.opacity(0.8) : .pairTextSecondary)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 20)
+            .background(
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(isSelected ? moodColor : Color.clear)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(isSelected ? Color.clear : Color.pairCardBorder, lineWidth: 1)
+            )
+        }
+        .buttonStyle(.plain)
+    }
+    
+    private var modeSubtitle: String {
+        switch mode {
+        case .sameSound: return "sonically close"
+        case .sameVibe: return "emotionally aligned"
+        case .sameScene: return "same place, different song"
+        case .adventure: return "surprise me"
+        }
+    }
+}
+
 #Preview {
     NavigationStack {
         PromptView(seedTrack: SpotifyTrack(
             trackId: "test",
-            trackName: "Test Song",
-            artistName: "Test Artist",
-            albumArtUrl: nil,
+            trackName: "Midnight City",
+            artistName: "M83",
+            albumArtUrl: "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=200",
             previewUrl: nil,
             spotifyUrl: "https://spotify.com"
         ))

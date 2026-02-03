@@ -6,6 +6,7 @@ struct PlaylistDetailView: View {
     @EnvironmentObject var authManager: AuthManager
     @EnvironmentObject var audioPlayer: AudioPlayer
     @EnvironmentObject var remixManager: RemixManager
+    @EnvironmentObject var navigationState: NavigationState
     @Environment(\.dismiss) private var dismiss
     
     @State private var playlist: Playlist?
@@ -66,6 +67,12 @@ struct PlaylistDetailView: View {
                     remixManager.setRemix(from: playlist)
                 }
             }
+        }
+        .onAppear {
+            navigationState.hideNavBar()
+        }
+        .onDisappear {
+            navigationState.showNavBar()
         }
     }
     
