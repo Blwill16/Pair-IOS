@@ -250,10 +250,6 @@ struct PromptView: View {
                 selectedMode = mode
             }
         }
-        .onDisappear {
-            // Show nav bar when returning to main screens
-            navigationState.showNavBar()
-        }
     }
     
     private func generatePairing() {

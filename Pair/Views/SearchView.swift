@@ -22,6 +22,8 @@ let mockTrendingSeeds = [
 ]
 
 struct SearchView: View {
+    @EnvironmentObject var navigationState: NavigationState
+    
     @State private var searchText = ""
     @State private var searchResults: [SpotifyTrack] = []
     @State private var isSearching = false
@@ -63,6 +65,10 @@ struct SearchView: View {
                     SongConfirmationView(track: track)
                 }
             }
+        }
+        .onAppear {
+            // Show nav bar when returning to main tab
+            navigationState.showNavBar()
         }
     }
     

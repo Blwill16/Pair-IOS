@@ -151,6 +151,8 @@ struct ExploreView: View {
             }
         }
         .onAppear {
+            // Show nav bar when returning to main tab and reset scroll state
+            navigationState.showNavBar()
             navigationState.resetScrollState()
         }
     }

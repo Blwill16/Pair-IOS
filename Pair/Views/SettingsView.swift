@@ -143,9 +143,6 @@ struct SettingsView: View {
         .onAppear {
             navigationState.hideNavBar()
         }
-        .onDisappear {
-            navigationState.showNavBar()
-        }
     }
 }
 

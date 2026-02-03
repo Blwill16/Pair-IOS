@@ -71,9 +71,6 @@ struct PlaylistDetailView: View {
         .onAppear {
             navigationState.hideNavBar()
         }
-        .onDisappear {
-            navigationState.showNavBar()
-        }
     }
     
     private var loadingView: some View {

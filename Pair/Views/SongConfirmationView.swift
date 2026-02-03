@@ -119,11 +119,24 @@ struct SongConfirmationView: View {
                     showContent = true
                     navigationState.hideNavBar()
                 }
-                .onDisappear {
-                    navigationState.showNavBar()
-                }
         .navigationDestination(isPresented: $navigateToPrompt) {
             PromptView(seedTrack: track)
+        }
+        // Add custom back button overlay
+        .toolbar {
+            ToolbarItem(placement: .navigationBarLeading) {
+                Button {
+                    dismiss()
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: "chevron.left")
+                            .font(.system(size: 14))
+                        Text("Back")
+                            .font(.subheadline)
+                    }
+                    .foregroundColor(.pairTextSecondary.opacity(0.6))
+                }
+            }
         }
     }
 }

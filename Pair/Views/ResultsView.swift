@@ -92,9 +92,6 @@ struct ResultsView: View {
         .onAppear {
             navigationState.hideNavBar()
         }
-        .onDisappear {
-            navigationState.showNavBar()
-        }
     }
     
     // MARK: - Header Section
