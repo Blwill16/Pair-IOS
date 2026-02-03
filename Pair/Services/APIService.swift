@@ -4,8 +4,8 @@ class APIService: ObservableObject {
     static let shared = APIService()
     
     // MARK: - Configuration
-    // Update this URL after deploying to Vercel
-    private static let defaultBaseURL = "http://localhost:3000"
+    // Vercel deployment URL
+    private static let defaultBaseURL = "https://pair-api-seven.vercel.app"
     
     private let baseURL: String
     
