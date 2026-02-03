@@ -15,26 +15,8 @@ struct SongConfirmationView: View {
     
     var body: some View {
         ZStack {
-            // Base background
+            // Base background - clean, no gradients
             Color.pairBackground.ignoresSafeArea()
-            
-            // Atmospheric mood color gradient at top per Figma
-            VStack {
-                RadialGradient(
-                    colors: [
-                        moodColor.opacity(0.3),
-                        moodColor.opacity(0.15),
-                        Color.clear
-                    ],
-                    center: .top,
-                    startRadius: 0,
-                    endRadius: UIScreen.main.bounds.height * 0.6
-                )
-                .frame(height: UIScreen.main.bounds.height * 0.6)
-                .ignoresSafeArea()
-                
-                Spacer()
-            }
             
             // Content
             VStack(spacing: 0) {
@@ -146,13 +128,11 @@ struct SongConfirmationView: View {
     }
 }
 
-// MARK: - Album Artwork with Breathing Glow
+// MARK: - Album Artwork (clean, no glow effects)
 struct AlbumArtworkView: View {
     let imageUrl: String?
     let moodColor: Color
     let size: CGFloat
-    
-    @State private var glowIntensity: CGFloat = 0.2
     
     var body: some View {
         AsyncImage(url: URL(string: imageUrl ?? "")) { image in
@@ -170,13 +150,7 @@ struct AlbumArtworkView: View {
         }
         .frame(width: size, height: size)
         .cornerRadius(24)
-        .shadow(color: moodColor.opacity(glowIntensity), radius: 30, x: 0, y: 20)
-        .shadow(color: moodColor.opacity(glowIntensity * 0.5), radius: 60, x: 0, y: 30)
-        .onAppear {
-            withAnimation(.easeInOut(duration: 3).repeatForever(autoreverses: true)) {
-                glowIntensity = 0.25
-            }
-        }
+        .shadow(color: Color.black.opacity(0.1), radius: 20, x: 0, y: 10)
     }
 }
 

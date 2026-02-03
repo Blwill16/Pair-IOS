@@ -65,19 +65,11 @@ struct ProfileView: View {
                 
                 ScrollView {
                     VStack(spacing: 0) {
-                        // Header with back and settings
+                        // Header with settings (no back button on main profile tab)
                         HStack {
-                            Button {
-                                // Back action - handled by navigation
-                            } label: {
-                                HStack(spacing: 4) {
-                                    Image(systemName: "arrow.left")
-                                        .font(.system(size: 16))
-                                    Text("Back")
-                                        .font(.subheadline)
-                                }
-                                .foregroundColor(.pairTextSecondary)
-                            }
+                            Text("Profile")
+                                .font(.system(size: 28, weight: .bold))
+                                .foregroundColor(.pairTextPrimary)
                             
                             Spacer()
                             
@@ -102,7 +94,7 @@ struct ProfileView: View {
                             }
                         }
                         .padding(.horizontal, 24)
-                        .padding(.top, 60)
+                        .padding(.top, 16)
                         .padding(.bottom, 24)
                         
                         // Profile avatar and info
