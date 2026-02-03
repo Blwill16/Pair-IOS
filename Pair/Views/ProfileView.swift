@@ -43,6 +43,7 @@ struct ProfileView: View {
     
     @EnvironmentObject var authManager: AuthManager
     @EnvironmentObject var audioPlayer: AudioPlayer
+    @EnvironmentObject var navigationState: NavigationState
     
     @State private var profile: Profile?
     @State private var isLoading = false
@@ -50,6 +51,8 @@ struct ProfileView: View {
     @State private var isFollowing = false
     @State private var selectedPlaylist: Playlist?
     @State private var showEditProfile = false
+    @State private var viewHeight: CGFloat = 0
+    @State private var contentHeight: CGFloat = 0
     
     private let apiService = APIService.shared
     
@@ -62,8 +65,9 @@ struct ProfileView: View {
             ZStack {
                 Color.pairBackground.ignoresSafeArea()
                 
-                ScrollView {
-                    VStack(spacing: 0) {
+                GeometryReader { outerGeometry in
+                    ScrollView {
+                        VStack(spacing: 0) {
                         // Header with back and settings
                         HStack {
                             Button {
@@ -226,6 +230,24 @@ struct ProfileView: View {
                             .padding(.horizontal, 24)
                         }
                         .padding(.bottom, 120)
+                        }
+                        .background(
+                            GeometryReader { contentGeometry in
+                                Color.clear
+                                    .preference(key: ScrollOffsetPreferenceKey.self, value: -contentGeometry.frame(in: .named("profileScroll")).origin.y)
+                                    .preference(key: ContentHeightPreferenceKey.self, value: contentGeometry.size.height)
+                            }
+                        )
+                    }
+                    .coordinateSpace(name: "profileScroll")
+                    .onPreferenceChange(ScrollOffsetPreferenceKey.self) { offset in
+                        navigationState.handleScroll(offset: offset, contentHeight: contentHeight, viewHeight: viewHeight)
+                    }
+                    .onPreferenceChange(ContentHeightPreferenceKey.self) { height in
+                        contentHeight = height
+                    }
+                    .onAppear {
+                        viewHeight = outerGeometry.size.height
                     }
                 }
                 
@@ -250,6 +272,9 @@ struct ProfileView: View {
                     Task { await loadProfile() }
                 }
             }
+        }
+        .onAppear {
+            navigationState.resetScrollTracking()
         }
     }
     

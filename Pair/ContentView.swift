@@ -1,19 +1,108 @@
 import SwiftUI
 
+// MARK: - Scroll Offset Tracking
+struct ScrollOffsetPreferenceKey: PreferenceKey {
+    static var defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = nextValue()
+    }
+}
+
+struct ViewHeightPreferenceKey: PreferenceKey {
+    static var defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = nextValue()
+    }
+}
+
+struct ContentHeightPreferenceKey: PreferenceKey {
+    static var defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = nextValue()
+    }
+}
+
 // MARK: - Navigation State
-// Tracks whether the floating nav bar should be visible
+// Tracks whether the floating nav bar should be visible with smart auto-hide on scroll
 class NavigationState: ObservableObject {
     @Published var isNavBarVisible: Bool = true
+    @Published var isNavBarEnabled: Bool = true // Whether nav bar should show at all (false for full-screen experiences)
     
+    private var lastScrollOffset: CGFloat = 0
+    private let scrollThreshold: CGFloat = 5 // Minimum scroll distance before triggering
+    
+    // Manually hide nav bar (for full-screen experiences like create pairing, results, settings)
     func hideNavBar() {
-        withAnimation(.easeOut(duration: 0.2)) {
+        withAnimation(.easeInOut(duration: 0.3)) {
+            isNavBarEnabled = false
             isNavBarVisible = false
         }
     }
     
+    // Manually show nav bar (when returning from full-screen experiences)
     func showNavBar() {
-        withAnimation(.easeIn(duration: 0.2)) {
+        withAnimation(.easeInOut(duration: 0.3)) {
+            isNavBarEnabled = true
             isNavBarVisible = true
+        }
+    }
+    
+    // Handle scroll-based auto-hide (for scrollable screens like Discover, Profile)
+    func handleScroll(offset: CGFloat, contentHeight: CGFloat, viewHeight: CGFloat) {
+        guard isNavBarEnabled else { return }
+        
+        let delta = offset - lastScrollOffset
+        
+        // Always show nav bar near top or bottom
+        if offset < 50 {
+            if !isNavBarVisible {
+                withAnimation(.easeInOut(duration: 0.3)) {
+                    isNavBarVisible = true
+                }
+            }
+            lastScrollOffset = offset
+            return
+        }
+        
+        // Near bottom - always show
+        let maxScroll = contentHeight - viewHeight
+        if offset >= maxScroll - 50 {
+            if !isNavBarVisible {
+                withAnimation(.easeInOut(duration: 0.3)) {
+                    isNavBarVisible = true
+                }
+            }
+            lastScrollOffset = offset
+            return
+        }
+        
+        // Check scroll direction with threshold
+        if delta > scrollThreshold {
+            // Scrolling down - hide nav
+            if isNavBarVisible {
+                withAnimation(.easeInOut(duration: 0.3)) {
+                    isNavBarVisible = false
+                }
+            }
+        } else if delta < -scrollThreshold {
+            // Scrolling up - show nav
+            if !isNavBarVisible {
+                withAnimation(.easeInOut(duration: 0.3)) {
+                    isNavBarVisible = true
+                }
+            }
+        }
+        
+        lastScrollOffset = offset
+    }
+    
+    // Reset scroll tracking (call when switching tabs)
+    func resetScrollTracking() {
+        lastScrollOffset = 0
+        if isNavBarEnabled && !isNavBarVisible {
+            withAnimation(.easeInOut(duration: 0.3)) {
+                isNavBarVisible = true
+            }
         }
     }
 }
@@ -47,12 +136,13 @@ struct ContentView: View {
                 .tabViewStyle(.page(indexDisplayMode: .never))
                 .environmentObject(navigationState)
                 
-                // Floating nav bar - hidden on detail screens
-                if navigationState.isNavBarVisible {
-                    FloatingNavBar(selectedTab: $selectedTab)
-                        .padding(.bottom, 20)
-                        .transition(.move(edge: .bottom).combined(with: .opacity))
-                }
+                // Floating nav bar with smart auto-hide
+                // Uses translateY animation per Figma spec
+                FloatingNavBar(selectedTab: $selectedTab)
+                    .padding(.bottom, 20)
+                    .offset(y: navigationState.isNavBarVisible ? 0 : 100)
+                    .opacity(navigationState.isNavBarVisible ? 1 : 0)
+                    .animation(.easeInOut(duration: 0.3), value: navigationState.isNavBarVisible)
             }
             .ignoresSafeArea(.keyboard)
         }

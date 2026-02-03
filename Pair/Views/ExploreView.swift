@@ -58,6 +58,7 @@ let mockDiscoverPlaylists = [
 
 struct ExploreView: View {
     @EnvironmentObject var authManager: AuthManager
+    @EnvironmentObject var navigationState: NavigationState
     
     @State private var publicPlaylists: [Playlist] = []
     @State private var myPlaylists: [Playlist] = []
@@ -65,6 +66,8 @@ struct ExploreView: View {
     @State private var errorMessage: String?
     @State private var selectedPlaylist: Playlist?
     @State private var selectedMockPlaylist: MockPlaylist?
+    @State private var viewHeight: CGFloat = 0
+    @State private var contentHeight: CGFloat = 0
     
     private let apiService = APIService.shared
     
@@ -80,43 +83,62 @@ struct ExploreView: View {
             ZStack {
                 Color.pairBackground.ignoresSafeArea()
                 
-                ScrollView {
-                    VStack(spacing: 0) {
-                        // Fixed header per Figma
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("Discover")
-                                .font(.system(size: 28, weight: .bold))
-                                .foregroundColor(.pairTextPrimary)
-                            
-                            Text("Playlists curated by people with taste")
-                                .font(.subheadline)
-                                .foregroundColor(.pairTextSecondary)
-                        }
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(.horizontal, 24)
-                        .padding(.top, 16)
-                        .padding(.bottom, 20)
-                        
-                        // Playlist cards grid
-                        LazyVStack(spacing: 16) {
-                            ForEach(mockDiscoverPlaylists) { playlist in
-                                DiscoverPlaylistCard(playlist: playlist)
-                                    .onTapGesture {
-                                        selectedMockPlaylist = playlist
-                                    }
+                GeometryReader { outerGeometry in
+                    ScrollView {
+                        VStack(spacing: 0) {
+                            // Fixed header per Figma
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("Discover")
+                                    .font(.system(size: 28, weight: .bold))
+                                    .foregroundColor(.pairTextPrimary)
+                                
+                                Text("Playlists curated by people with taste")
+                                    .font(.subheadline)
+                                    .foregroundColor(.pairTextSecondary)
                             }
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.horizontal, 24)
+                            .padding(.top, 16)
+                            .padding(.bottom, 20)
                             
-                            // Also show real playlists if any
-                            ForEach(allPlaylists) { playlist in
-                                ExplorePlaylistRow(playlist: playlist)
-                                    .contentShape(Rectangle())
-                                    .onTapGesture {
-                                        selectedPlaylist = playlist
-                                    }
+                            // Playlist cards grid
+                            LazyVStack(spacing: 16) {
+                                ForEach(mockDiscoverPlaylists) { playlist in
+                                    DiscoverPlaylistCard(playlist: playlist)
+                                        .onTapGesture {
+                                            selectedMockPlaylist = playlist
+                                        }
+                                }
+                                
+                                // Also show real playlists if any
+                                ForEach(allPlaylists) { playlist in
+                                    ExplorePlaylistRow(playlist: playlist)
+                                        .contentShape(Rectangle())
+                                        .onTapGesture {
+                                            selectedPlaylist = playlist
+                                        }
+                                }
                             }
+                            .padding(.horizontal, 24)
+                            .padding(.bottom, 120)
                         }
-                        .padding(.horizontal, 24)
-                        .padding(.bottom, 120)
+                        .background(
+                            GeometryReader { contentGeometry in
+                                Color.clear
+                                    .preference(key: ScrollOffsetPreferenceKey.self, value: -contentGeometry.frame(in: .named("scroll")).origin.y)
+                                    .preference(key: ContentHeightPreferenceKey.self, value: contentGeometry.size.height)
+                            }
+                        )
+                    }
+                    .coordinateSpace(name: "scroll")
+                    .onPreferenceChange(ScrollOffsetPreferenceKey.self) { offset in
+                        navigationState.handleScroll(offset: offset, contentHeight: contentHeight, viewHeight: viewHeight)
+                    }
+                    .onPreferenceChange(ContentHeightPreferenceKey.self) { height in
+                        contentHeight = height
+                    }
+                    .onAppear {
+                        viewHeight = outerGeometry.size.height
                     }
                 }
                 
@@ -136,6 +158,9 @@ struct ExploreView: View {
             .navigationDestination(item: $selectedPlaylist) { playlist in
                 PlaylistDetailView(playlistId: playlist.id)
             }
+        }
+        .onAppear {
+            navigationState.resetScrollTracking()
         }
     }
     
