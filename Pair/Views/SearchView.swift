@@ -9,13 +9,16 @@ struct MockSong: Identifiable {
 }
 
 let mockRecentPairings = [
-    MockSong(name: "Midnight City", artist: "M83", imageUrl: "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=100"),
-    MockSong(name: "Holocene", artist: "Bon Iver", imageUrl: "https://images.unsplash.com/photo-1459749411175-04bf5292ceea?w=100")
+    MockSong(name: "Midnight City", artist: "M83", imageUrl: "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=200"),
+    MockSong(name: "Holocene", artist: "Bon Iver", imageUrl: "https://images.unsplash.com/photo-1459749411175-04bf5292ceea?w=200"),
+    MockSong(name: "Nightcall", artist: "Kavinsky", imageUrl: "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=200")
 ]
 
 let mockTrendingSeeds = [
-    MockSong(name: "Intro", artist: "The xx", imageUrl: "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=100"),
-    MockSong(name: "Teardrop", artist: "Massive Attack", imageUrl: "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=100")
+    MockSong(name: "Intro", artist: "The xx", imageUrl: "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=200"),
+    MockSong(name: "Teardrop", artist: "Massive Attack", imageUrl: "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=200"),
+    MockSong(name: "Skinny Love", artist: "Bon Iver", imageUrl: "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=200"),
+    MockSong(name: "Breathe", artist: "Télépopmusik", imageUrl: "https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?w=200")
 ]
 
 struct SearchView: View {
@@ -65,24 +68,24 @@ struct SearchView: View {
     
     private var emptyStateView: some View {
         VStack(spacing: 0) {
-            // Header section
+            // Header section per Figma
             VStack(spacing: 8) {
                 Text("Start with a song")
-                    .font(.system(size: 32, weight: .bold))
+                    .font(.system(size: 28, weight: .bold))
                     .foregroundColor(.pairTextPrimary)
                 
                 Text("We'll find what belongs with it")
-                    .font(.body)
+                    .font(.subheadline)
                     .foregroundColor(.pairTextSecondary)
             }
-            .padding(.top, 80)
+            .padding(.top, 60)
             .padding(.bottom, 32)
             
-            // Search bar
+            // Hero search input per Figma - elevated with shadow
             HStack(spacing: 12) {
                 Image(systemName: "magnifyingglass")
                     .foregroundColor(.pairTextTertiary)
-                    .font(.system(size: 18))
+                    .font(.system(size: 20))
                 
                 TextField("", text: $searchText, prompt: Text(placeholders[placeholderIndex])
                     .foregroundColor(.pairTextTertiary))
@@ -93,11 +96,16 @@ struct SearchView: View {
                     }
             }
             .padding(.horizontal, 20)
-            .padding(.vertical, 18)
+            .padding(.vertical, 16)
             .background(
                 RoundedRectangle(cornerRadius: 16)
-                    .fill(Color.pairBackgroundSecondary)
+                    .fill(Color.pairCardBackground)
             )
+            .overlay(
+                RoundedRectangle(cornerRadius: 16)
+                    .stroke(Color.pairCardBorder, lineWidth: 1)
+            )
+            .shadow(color: Color.black.opacity(0.06), radius: 12, y: 4)
             .padding(.horizontal, 24)
             .padding(.bottom, 40)
             
@@ -305,28 +313,47 @@ struct SearchView: View {
     }
 }
 
-// MARK: - Recent Song Card
+// MARK: - Recent Song Card (Figma: Song card with mood color overlay)
 struct RecentSongCard: View {
     let song: MockSong
     let action: () -> Void
+    @State private var isPressed = false
+    
+    // Get mood color based on song name
+    private var moodColor: Color {
+        MoodColorHelper.getMoodColor(for: song.name, artist: song.artist)
+    }
     
     var body: some View {
         Button(action: action) {
-            VStack(alignment: .leading, spacing: 8) {
-                AsyncImage(url: URL(string: song.imageUrl)) { image in
-                    image
-                        .resizable()
-                        .aspectRatio(contentMode: .fill)
-                } placeholder: {
-                    Rectangle()
-                        .fill(Color.pairBackgroundSecondary)
-                        .overlay {
-                            Image(systemName: "music.note")
-                                .foregroundColor(.pairTextTertiary)
-                        }
+            VStack(alignment: .leading, spacing: 10) {
+                // Album art with subtle mood color overlay
+                ZStack(alignment: .bottomLeading) {
+                    AsyncImage(url: URL(string: song.imageUrl)) { image in
+                        image
+                            .resizable()
+                            .aspectRatio(contentMode: .fill)
+                    } placeholder: {
+                        Rectangle()
+                            .fill(Color.pairBackgroundSecondary)
+                            .overlay {
+                                Image(systemName: "music.note")
+                                    .font(.system(size: 24))
+                                    .foregroundColor(.pairTextTertiary)
+                            }
+                    }
+                    .frame(width: 140, height: 140)
+                    .cornerRadius(12)
+                    
+                    // Subtle mood color gradient overlay
+                    LinearGradient(
+                        colors: [Color.clear, moodColor.opacity(0.3)],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                    .cornerRadius(12)
                 }
-                .frame(width: 120, height: 120)
-                .cornerRadius(12)
+                .shadow(color: moodColor.opacity(0.15), radius: 8, y: 4)
                 
                 VStack(alignment: .leading, spacing: 2) {
                     Text(song.name)
@@ -341,8 +368,13 @@ struct RecentSongCard: View {
                         .lineLimit(1)
                 }
             }
-            .frame(width: 120)
+            .frame(width: 140)
         }
+        .scaleEffect(isPressed ? 0.97 : 1.0)
+        .animation(.easeOut(duration: 0.15), value: isPressed)
+        .onLongPressGesture(minimumDuration: .infinity, pressing: { pressing in
+            isPressed = pressing
+        }, perform: {})
     }
 }
 
