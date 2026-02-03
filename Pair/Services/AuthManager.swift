@@ -32,6 +32,9 @@ class AuthManager: ObservableObject {
            let user = try? JSONDecoder().decode(User.self, from: userData) {
             self.currentUser = user
             self.isAuthenticated = true
+        } else if UserDefaults.standard.bool(forKey: "isGuest") {
+            self.isAuthenticated = true
+            self.currentUser = nil
         }
     }
     
@@ -193,11 +196,13 @@ class AuthManager: ObservableObject {
         isAuthenticated = false
         UserDefaults.standard.removeObject(forKey: "currentUser")
         UserDefaults.standard.removeObject(forKey: "accessToken")
+        UserDefaults.standard.removeObject(forKey: "isGuest")
     }
     
     func continueAsGuest() {
-        isAuthenticated = false
+        isAuthenticated = true
         currentUser = nil
+        UserDefaults.standard.set(true, forKey: "isGuest")
     }
 }
 
