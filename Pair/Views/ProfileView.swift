@@ -65,15 +65,6 @@ struct ProfileView: View {
                 
                 ScrollView {
                     VStack(spacing: 0) {
-                        // Scroll tracking anchor at top
-                        GeometryReader { geo in
-                            Color.clear
-                                .preference(
-                                    key: ScrollOffsetPreferenceKey.self,
-                                    value: geo.frame(in: .global).minY
-                                )
-                        }
-                        .frame(height: 0)
                         // Header with back and settings
                         HStack {
                             Button {
@@ -238,9 +229,6 @@ struct ProfileView: View {
                         .padding(.bottom, 120)
                     }
                 }
-                .onPreferenceChange(ScrollOffsetPreferenceKey.self) { value in
-                    navigationState.handleScrollOffset(value)
-                }
                 
                 if isLoading && profile == nil {
                     ProgressView()
@@ -265,7 +253,7 @@ struct ProfileView: View {
             }
         }
         .onAppear {
-            navigationState.resetScrollTracking()
+            // Nav bar always visible on main tabs for now
         }
     }
     

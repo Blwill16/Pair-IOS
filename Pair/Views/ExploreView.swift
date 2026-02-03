@@ -83,16 +83,6 @@ struct ExploreView: View {
                 
                 ScrollView {
                     VStack(spacing: 0) {
-                        // Scroll tracking anchor at top
-                        GeometryReader { geo in
-                            Color.clear
-                                .preference(
-                                    key: ScrollOffsetPreferenceKey.self,
-                                    value: geo.frame(in: .global).minY
-                                )
-                        }
-                        .frame(height: 0)
-                        
                         // Fixed header per Figma
                         VStack(alignment: .leading, spacing: 4) {
                             Text("Discover")
@@ -130,9 +120,6 @@ struct ExploreView: View {
                         .padding(.bottom, 120)
                     }
                 }
-                .onPreferenceChange(ScrollOffsetPreferenceKey.self) { value in
-                    navigationState.handleScrollOffset(value)
-                }
                 
                 if isLoading && allPlaylists.isEmpty && mockDiscoverPlaylists.isEmpty {
                     ProgressView()
@@ -152,7 +139,7 @@ struct ExploreView: View {
             }
         }
         .onAppear {
-            navigationState.resetScrollTracking()
+            // Nav bar always visible on main tabs for now
         }
     }
     

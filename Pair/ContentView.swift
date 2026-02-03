@@ -23,14 +23,10 @@ struct ContentHeightPreferenceKey: PreferenceKey {
 }
 
 // MARK: - Navigation State
-// Tracks whether the floating nav bar should be visible with smart auto-hide on scroll
+// Tracks whether the floating nav bar should be visible
 class NavigationState: ObservableObject {
     @Published var isNavBarVisible: Bool = true
     @Published var isNavBarEnabled: Bool = true // Whether nav bar should show at all (false for full-screen experiences)
-    
-    private var initialOffset: CGFloat? = nil // The Y position when scroll starts (at top)
-    private var lastOffset: CGFloat = 0
-    private let scrollThreshold: CGFloat = 20 // Minimum scroll distance before triggering
     
     // Manually hide nav bar (for full-screen experiences like create pairing, results, settings)
     func hideNavBar() {
@@ -45,70 +41,6 @@ class NavigationState: ObservableObject {
         withAnimation(.easeInOut(duration: 0.3)) {
             isNavBarEnabled = true
             isNavBarVisible = true
-        }
-    }
-    
-    // Handle scroll using global Y position (simpler and more reliable)
-    // When scrolling down, minY decreases (content moves up)
-    // When scrolling up, minY increases (content moves down)
-    func handleScrollOffset(_ currentOffset: CGFloat) {
-        guard isNavBarEnabled else { return }
-        
-        // Initialize on first call
-        if initialOffset == nil {
-            initialOffset = currentOffset
-            lastOffset = currentOffset
-            return
-        }
-        
-        let delta = currentOffset - lastOffset
-        let scrolledAmount = (initialOffset ?? currentOffset) - currentOffset
-        
-        // Near top of scroll (within 50 points of initial position) - always show
-        if scrolledAmount < 50 {
-            if !isNavBarVisible {
-                withAnimation(.easeInOut(duration: 0.3)) {
-                    isNavBarVisible = true
-                }
-            }
-            lastOffset = currentOffset
-            return
-        }
-        
-        // Scrolling down (delta is negative - content moving up)
-        if delta < -scrollThreshold {
-            if isNavBarVisible {
-                withAnimation(.easeInOut(duration: 0.3)) {
-                    isNavBarVisible = false
-                }
-            }
-            lastOffset = currentOffset
-        }
-        // Scrolling up (delta is positive - content moving down)
-        else if delta > scrollThreshold {
-            if !isNavBarVisible {
-                withAnimation(.easeInOut(duration: 0.3)) {
-                    isNavBarVisible = true
-                }
-            }
-            lastOffset = currentOffset
-        }
-    }
-    
-    // Legacy method for backward compatibility
-    func handleScroll(offset: CGFloat, contentHeight: CGFloat, viewHeight: CGFloat) {
-        // Convert to the new format (invert since old method used positive offset for scroll down)
-        handleScrollOffset(-offset)
-    }
-    
-    // Reset scroll tracking (call when switching tabs or appearing)
-    func resetScrollTracking() {
-        initialOffset = nil
-        lastOffset = 0
-        if isNavBarEnabled && !isNavBarVisible {
-            withAnimation(.easeInOut(duration: 0.3)) {
-                isNavBarVisible = true
-            }
         }
     }
 }
