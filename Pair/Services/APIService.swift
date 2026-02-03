@@ -3,10 +3,14 @@ import Foundation
 class APIService: ObservableObject {
     static let shared = APIService()
     
+    // MARK: - Configuration
+    // Update this URL after deploying to Vercel
+    private static let defaultBaseURL = "http://localhost:3000"
+    
     private let baseURL: String
     
     init() {
-        self.baseURL = ProcessInfo.processInfo.environment["PAIR_API_BASE_URL"] ?? "http://localhost:3000"
+        self.baseURL = ProcessInfo.processInfo.environment["PAIR_API_BASE_URL"] ?? APIService.defaultBaseURL
     }
     
     func searchTracks(query: String) async throws -> [SpotifyTrack] {

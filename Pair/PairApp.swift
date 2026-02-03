@@ -10,6 +10,23 @@ struct PairApp: App {
             ContentView()
                 .environmentObject(authManager)
                 .environmentObject(audioPlayer)
+                .onOpenURL { url in
+                    handleIncomingURL(url)
+                }
+        }
+    }
+    
+    private func handleIncomingURL(_ url: URL) {
+        guard url.scheme == "pair" else { return }
+        
+        if url.host == "auth-callback" {
+            Task {
+                do {
+                    try await authManager.handleMagicLinkCallback(url: url)
+                } catch {
+                    print("Magic link auth failed: \(error)")
+                }
+            }
         }
     }
 }

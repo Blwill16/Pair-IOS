@@ -104,7 +104,10 @@ class AuthManager: ObservableObject {
         request.setValue(supabaseAnonKey, forHTTPHeaderField: "apikey")
         
         let body: [String: Any] = [
-            "email": email
+            "email": email,
+            "options": [
+                "redirectTo": "pair://auth-callback"
+            ]
         ]
         
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
@@ -113,6 +116,71 @@ class AuthManager: ObservableObject {
         
         guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
             throw AuthError.signInFailed
+        }
+    }
+    
+    func handleMagicLinkCallback(url: URL) async throws {
+        isLoading = true
+        defer { isLoading = false }
+        
+        guard url.scheme == "pair", url.host == "auth-callback" else {
+            return
+        }
+        
+        guard let fragment = url.fragment else {
+            throw AuthError.invalidCredential
+        }
+        
+        var params: [String: String] = [:]
+        for pair in fragment.components(separatedBy: "&") {
+            let components = pair.components(separatedBy: "=")
+            if components.count == 2 {
+                params[components[0]] = components[1].removingPercentEncoding
+            }
+        }
+        
+        guard let accessToken = params["access_token"] else {
+            throw AuthError.invalidCredential
+        }
+        
+        UserDefaults.standard.set(accessToken, forKey: "accessToken")
+        
+        if let refreshToken = params["refresh_token"] {
+            UserDefaults.standard.set(refreshToken, forKey: "refreshToken")
+        }
+        
+        try await fetchCurrentUser(accessToken: accessToken)
+    }
+    
+    private func fetchCurrentUser(accessToken: String) async throws {
+        guard let url = URL(string: "\(supabaseURL)/auth/v1/user") else {
+            throw AuthError.invalidURL
+        }
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
+        request.setValue(supabaseAnonKey, forHTTPHeaderField: "apikey")
+        
+        let (data, response) = try await URLSession.shared.data(for: request)
+        
+        guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
+            throw AuthError.signInFailed
+        }
+        
+        struct UserResponse: Codable {
+            let id: String
+            let email: String?
+        }
+        
+        let userResponse = try JSONDecoder().decode(UserResponse.self, from: data)
+        
+        let user = User(id: userResponse.id, email: userResponse.email)
+        self.currentUser = user
+        self.isAuthenticated = true
+        
+        if let userData = try? JSONEncoder().encode(user) {
+            UserDefaults.standard.set(userData, forKey: "currentUser")
         }
     }
     
