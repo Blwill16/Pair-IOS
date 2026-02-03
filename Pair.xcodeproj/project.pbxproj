@@ -23,6 +23,7 @@
 		014 /* AudioPlayer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 114; };
 		015 /* TrackRowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 115; };
 		016 /* PlaylistRowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 116; };
+		017 /* RemixManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 118; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -44,6 +45,7 @@
 		115 /* TrackRowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrackRowView.swift; sourceTree = "<group>"; };
 		116 /* PlaylistRowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaylistRowView.swift; sourceTree = "<group>"; };
 		117 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		118 /* RemixManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemixManager.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -102,6 +104,7 @@
 				105 /* APIService.swift */,
 				106 /* AuthManager.swift */,
 				114 /* AudioPlayer.swift */,
+				118 /* RemixManager.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -199,27 +202,28 @@
 
 /* Begin PBXSourcesBuildPhase section */
 		401 /* Sources */ = {
-			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				001 /* PairApp.swift in Sources */,
-				002 /* ContentView.swift in Sources */,
-				004 /* Models.swift in Sources */,
-				005 /* APIService.swift in Sources */,
-				006 /* AuthManager.swift in Sources */,
-				007 /* SearchView.swift in Sources */,
-				008 /* PromptView.swift in Sources */,
-				009 /* ResultsView.swift in Sources */,
-				010 /* ExploreView.swift in Sources */,
-				011 /* FeedView.swift in Sources */,
-				012 /* ProfileView.swift in Sources */,
-				013 /* PlaylistDetailView.swift in Sources */,
-				014 /* AudioPlayer.swift in Sources */,
-				015 /* TrackRowView.swift in Sources */,
-				016 /* PlaylistRowView.swift in Sources */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
+				isa = PBXSourcesBuildPhase;
+				buildActionMask = 2147483647;
+				files = (
+					001 /* PairApp.swift in Sources */,
+					002 /* ContentView.swift in Sources */,
+					004 /* Models.swift in Sources */,
+					005 /* APIService.swift in Sources */,
+					006 /* AuthManager.swift in Sources */,
+					007 /* SearchView.swift in Sources */,
+					008 /* PromptView.swift in Sources */,
+					009 /* ResultsView.swift in Sources */,
+					010 /* ExploreView.swift in Sources */,
+					011 /* FeedView.swift in Sources */,
+					012 /* ProfileView.swift in Sources */,
+					013 /* PlaylistDetailView.swift in Sources */,
+					014 /* AudioPlayer.swift in Sources */,
+					015 /* TrackRowView.swift in Sources */,
+					016 /* PlaylistRowView.swift in Sources */,
+					017 /* RemixManager.swift in Sources */,
+				);
+				runOnlyForDeploymentPostprocessing = 0;
+			};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin XCBuildConfiguration section */
