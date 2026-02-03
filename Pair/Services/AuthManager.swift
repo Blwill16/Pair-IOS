@@ -9,12 +9,16 @@ class AuthManager: ObservableObject {
     @Published var currentUser: User?
     @Published var isLoading = false
     
+    // MARK: - Configuration
+    private static let defaultSupabaseURL = "https://rsqwasmycfykkrxpjfka.supabase.co"
+    private static let defaultSupabaseAnonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJzcXdhc215Y2Z5a2tyeHBqZmthIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzAwOTAwMzIsImV4cCI6MjA4NTY2NjAzMn0.taf4h0JRJfVQr4Ri_bydgLUE4xghdtRCE0U8d0R9-u4"
+    
     private let supabaseURL: String
     private let supabaseAnonKey: String
     
     init() {
-        self.supabaseURL = ProcessInfo.processInfo.environment["SUPABASE_URL"] ?? ""
-        self.supabaseAnonKey = ProcessInfo.processInfo.environment["SUPABASE_ANON_KEY"] ?? ""
+        self.supabaseURL = ProcessInfo.processInfo.environment["SUPABASE_URL"] ?? AuthManager.defaultSupabaseURL
+        self.supabaseAnonKey = ProcessInfo.processInfo.environment["SUPABASE_ANON_KEY"] ?? AuthManager.defaultSupabaseAnonKey
         
         checkExistingSession()
     }
