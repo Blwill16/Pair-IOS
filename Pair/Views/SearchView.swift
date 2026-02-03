@@ -120,13 +120,12 @@ struct SearchView: View {
                         ForEach(mockRecentPairings) { song in
                             RecentSongCard(song: song) {
                                 let track = SpotifyTrack(
-                                    id: song.id.uuidString,
+                                    trackId: song.id.uuidString,
                                     trackName: song.name,
                                     artistName: song.artist,
-                                    albumName: "",
                                     albumArtUrl: song.imageUrl,
                                     previewUrl: nil,
-                                    spotifyUrl: nil
+                                    spotifyUrl: ""
                                 )
                                 selectedTrack = track
                                 showPromptView = true
@@ -162,13 +161,12 @@ struct SearchView: View {
                     ForEach(mockTrendingSeeds) { song in
                         TrendingSongRow(song: song) {
                             let track = SpotifyTrack(
-                                id: song.id.uuidString,
+                                trackId: song.id.uuidString,
                                 trackName: song.name,
                                 artistName: song.artist,
-                                albumName: "",
                                 albumArtUrl: song.imageUrl,
                                 previewUrl: nil,
-                                spotifyUrl: nil
+                                spotifyUrl: ""
                             )
                             selectedTrack = track
                             showPromptView = true
@@ -183,13 +181,12 @@ struct SearchView: View {
             Button {
                 if let randomSong = mockTrendingSeeds.randomElement() {
                     let track = SpotifyTrack(
-                        id: randomSong.id.uuidString,
+                        trackId: randomSong.id.uuidString,
                         trackName: randomSong.name,
                         artistName: randomSong.artist,
-                        albumName: "",
                         albumArtUrl: randomSong.imageUrl,
                         previewUrl: nil,
-                        spotifyUrl: nil
+                        spotifyUrl: ""
                     )
                     selectedTrack = track
                     showPromptView = true
