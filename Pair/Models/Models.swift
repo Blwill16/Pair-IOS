@@ -1,0 +1,214 @@
+import Foundation
+
+struct SpotifyTrack: Codable, Identifiable, Hashable {
+    let trackId: String
+    let trackName: String
+    let artistName: String
+    let albumArtUrl: String?
+    let previewUrl: String?
+    let spotifyUrl: String
+    
+    var id: String { trackId }
+    
+    enum CodingKeys: String, CodingKey {
+        case trackId = "track_id"
+        case trackName = "track_name"
+        case artistName = "artist_name"
+        case albumArtUrl = "album_art_url"
+        case previewUrl = "preview_url"
+        case spotifyUrl = "spotify_url"
+    }
+}
+
+struct PairingResult: Codable, Identifiable, Hashable {
+    let trackId: String
+    let trackName: String
+    let artistName: String
+    let albumArtUrl: String?
+    let previewUrl: String?
+    let spotifyUrl: String
+    let score: Double?
+    let explanation: String?
+    
+    var id: String { trackId }
+    
+    enum CodingKeys: String, CodingKey {
+        case trackId = "track_id"
+        case trackName = "track_name"
+        case artistName = "artist_name"
+        case albumArtUrl = "album_art_url"
+        case previewUrl = "preview_url"
+        case spotifyUrl = "spotify_url"
+        case score
+        case explanation
+    }
+}
+
+struct PairResponse: Codable {
+    let seed: SpotifyTrack
+    let results: [PairingResult]
+}
+
+struct SearchResponse: Codable {
+    let tracks: [SpotifyTrack]
+}
+
+enum PairingMode: String, CaseIterable, Codable {
+    case sameSound = "same_sound"
+    case sameVibe = "same_vibe"
+    case sameScene = "same_scene"
+    case adventure = "adventure"
+    
+    var displayName: String {
+        switch self {
+        case .sameSound: return "Same Sound"
+        case .sameVibe: return "Same Vibe"
+        case .sameScene: return "Same Scene"
+        case .adventure: return "Adventure"
+        }
+    }
+    
+    var description: String {
+        switch self {
+        case .sameSound: return "Find tracks with similar audio characteristics"
+        case .sameVibe: return "Match the mood and feeling"
+        case .sameScene: return "Discover related artists and scenes"
+        case .adventure: return "Explore new territory while staying connected"
+        }
+    }
+}
+
+struct Profile: Codable, Identifiable {
+    let userId: String
+    let username: String
+    let displayName: String?
+    let bio: String?
+    let avatarUrl: String?
+    let createdAt: String?
+    let followerCount: Int?
+    let followingCount: Int?
+    let playlists: [Playlist]?
+    
+    var id: String { userId }
+    
+    enum CodingKeys: String, CodingKey {
+        case userId = "user_id"
+        case username
+        case displayName = "display_name"
+        case bio
+        case avatarUrl = "avatar_url"
+        case createdAt = "created_at"
+        case followerCount = "follower_count"
+        case followingCount = "following_count"
+        case playlists
+    }
+}
+
+struct Playlist: Codable, Identifiable, Hashable {
+    let id: String
+    let ownerId: String
+    let title: String
+    let promptText: String?
+    let seedTrackId: String?
+    let seedTrackName: String?
+    let seedArtistName: String?
+    let mode: String?
+    let isPublic: Bool
+    let createdAt: String?
+    let tracks: [PlaylistTrack]?
+    let likeCount: Int?
+    let viewerHasLiked: Bool?
+    let profiles: ProfileSummary?
+    
+    enum CodingKeys: String, CodingKey {
+        case id
+        case ownerId = "owner_id"
+        case title
+        case promptText = "prompt_text"
+        case seedTrackId = "seed_track_id"
+        case seedTrackName = "seed_track_name"
+        case seedArtistName = "seed_artist_name"
+        case mode
+        case isPublic = "is_public"
+        case createdAt = "created_at"
+        case tracks
+        case likeCount = "like_count"
+        case viewerHasLiked = "viewer_has_liked"
+        case profiles
+    }
+    
+    static func == (lhs: Playlist, rhs: Playlist) -> Bool {
+        lhs.id == rhs.id
+    }
+    
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(id)
+    }
+}
+
+struct ProfileSummary: Codable, Hashable {
+    let userId: String?
+    let username: String?
+    let displayName: String?
+    let avatarUrl: String?
+    
+    enum CodingKeys: String, CodingKey {
+        case userId = "user_id"
+        case username
+        case displayName = "display_name"
+        case avatarUrl = "avatar_url"
+    }
+}
+
+struct PlaylistTrack: Codable, Identifiable, Hashable {
+    let id: String
+    let playlistId: String
+    let trackId: String
+    let trackName: String?
+    let artistName: String?
+    let previewUrl: String?
+    let spotifyUrl: String?
+    let score: Double?
+    let explanation: String?
+    let rank: Int?
+    
+    enum CodingKeys: String, CodingKey {
+        case id
+        case playlistId = "playlist_id"
+        case trackId = "track_id"
+        case trackName = "track_name"
+        case artistName = "artist_name"
+        case previewUrl = "preview_url"
+        case spotifyUrl = "spotify_url"
+        case score
+        case explanation
+        case rank
+    }
+}
+
+struct SavedTrack: Codable, Identifiable {
+    let id: String
+    let userId: String
+    let trackId: String
+    let trackName: String?
+    let artistName: String?
+    let previewUrl: String?
+    let spotifyUrl: String?
+    let createdAt: String?
+    
+    enum CodingKeys: String, CodingKey {
+        case id
+        case userId = "user_id"
+        case trackId = "track_id"
+        case trackName = "track_name"
+        case artistName = "artist_name"
+        case previewUrl = "preview_url"
+        case spotifyUrl = "spotify_url"
+        case createdAt = "created_at"
+    }
+}
+
+struct User: Codable {
+    let id: String
+    let email: String?
+}
