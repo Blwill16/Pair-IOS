@@ -58,6 +58,9 @@ struct SearchView: View {
             .onChange(of: searchText) { _, newValue in
                 if newValue.isEmpty {
                     searchResults = []
+                } else if newValue.count >= 1 {
+                    // Live search as user types
+                    performSearch()
                 }
             }
             .navigationDestination(isPresented: $showPromptView) {
@@ -87,33 +90,66 @@ struct SearchView: View {
             .padding(.top, 60)
             .padding(.bottom, 32)
             
-            // Hero search input per Figma - elevated with shadow
-            HStack(spacing: 12) {
-                Image(systemName: "magnifyingglass")
-                    .foregroundColor(.pairTextTertiary)
-                    .font(.system(size: 20))
-                
-                TextField("", text: $searchText, prompt: Text(placeholders[placeholderIndex])
-                    .foregroundColor(.pairTextTertiary))
-                    .foregroundColor(.pairTextPrimary)
-                    .font(.body)
-                    .onSubmit {
-                        performSearch()
+            // Hero search input per Figma - elevated with shadow and border
+            VStack(spacing: 0) {
+                HStack(spacing: 12) {
+                    Image(systemName: "magnifyingglass")
+                        .foregroundColor(.pairTextTertiary)
+                        .font(.system(size: 20))
+                    
+                    TextField("", text: $searchText, prompt: Text(placeholders[placeholderIndex])
+                        .foregroundColor(.pairTextTertiary))
+                        .foregroundColor(.pairTextPrimary)
+                        .font(.body)
+                        .onSubmit {
+                            performSearch()
+                        }
+                    
+                    if !searchText.isEmpty {
+                        Button {
+                            searchText = ""
+                            searchResults = []
+                        } label: {
+                            Image(systemName: "xmark.circle.fill")
+                                .foregroundColor(.pairTextTertiary)
+                        }
                     }
+                }
+                .padding(.horizontal, 20)
+                .padding(.vertical, 16)
             }
-            .padding(.horizontal, 20)
-            .padding(.vertical, 16)
             .background(
                 RoundedRectangle(cornerRadius: 16)
                     .fill(Color.pairCardBackground)
             )
             .overlay(
                 RoundedRectangle(cornerRadius: 16)
-                    .stroke(Color.pairCardBorder, lineWidth: 1)
+                    .stroke(Color.black.opacity(0.15), lineWidth: 1.5)
             )
             .shadow(color: Color.black.opacity(0.06), radius: 12, y: 4)
             .padding(.horizontal, 24)
-            .padding(.bottom, 40)
+            .padding(.bottom, searchResults.isEmpty ? 40 : 16)
+            
+            // Quick select suggestions - show when user is typing
+            if !searchResults.isEmpty && !searchText.isEmpty {
+                VStack(spacing: 0) {
+                    ForEach(searchResults.prefix(3)) { track in
+                        QuickSelectRow(track: track)
+                            .contentShape(Rectangle())
+                            .onTapGesture {
+                                selectedTrack = track
+                                showPromptView = true
+                            }
+                    }
+                }
+                .background(
+                    RoundedRectangle(cornerRadius: 16)
+                        .fill(Color.pairCardBackground)
+                )
+                .shadow(color: Color.black.opacity(0.06), radius: 12, y: 4)
+                .padding(.horizontal, 24)
+                .padding(.bottom, 40)
+            }
             
             // Your recent pairings section
             VStack(alignment: .leading, spacing: 16) {
@@ -424,6 +460,47 @@ struct TrendingSongRow: View {
             }
             .padding(.vertical, 8)
         }
+    }
+}
+
+// MARK: - Quick Select Row (Figma: Compact suggestion row)
+struct QuickSelectRow: View {
+    let track: SpotifyTrack
+    
+    var body: some View {
+        HStack(spacing: 12) {
+            AsyncImage(url: URL(string: track.albumArtUrl ?? "")) { image in
+                image
+                    .resizable()
+                    .aspectRatio(contentMode: .fill)
+            } placeholder: {
+                Rectangle()
+                    .fill(Color.pairBackgroundSecondary)
+                    .overlay {
+                        Image(systemName: "music.note")
+                            .foregroundColor(.pairTextTertiary)
+                    }
+            }
+            .frame(width: 48, height: 48)
+            .cornerRadius(8)
+            
+            VStack(alignment: .leading, spacing: 2) {
+                Text(track.trackName)
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+                    .foregroundColor(.pairTextPrimary)
+                    .lineLimit(1)
+                
+                Text(track.artistName)
+                    .font(.caption)
+                    .foregroundColor(.pairTextSecondary)
+                    .lineLimit(1)
+            }
+            
+            Spacer()
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
     }
 }
 

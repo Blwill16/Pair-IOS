@@ -22,11 +22,13 @@ struct SongConfirmationView: View {
             VStack(spacing: 0) {
                 Spacer()
                 
-                // Album artwork with breathing glow
+                // Album artwork with play button
                 AlbumArtworkView(
                     imageUrl: track.albumArtUrl,
                     moodColor: moodColor,
-                    size: 288
+                    size: 288,
+                    previewUrl: track.previewUrl,
+                    trackId: track.trackId
                 )
                 .opacity(showContent ? 1 : 0)
                 .scaleEffect(showContent ? 1 : 0.95)
@@ -141,29 +143,61 @@ struct SongConfirmationView: View {
     }
 }
 
-// MARK: - Album Artwork (clean, no glow effects)
+// MARK: - Album Artwork with Play Button
 struct AlbumArtworkView: View {
     let imageUrl: String?
     let moodColor: Color
     let size: CGFloat
+    var previewUrl: String? = nil
+    var trackId: String? = nil
+    
+    @EnvironmentObject var audioPlayer: AudioPlayer
+    
+    private var isPlaying: Bool {
+        guard let trackId = trackId else { return false }
+        return audioPlayer.currentTrackId == trackId && audioPlayer.isPlaying
+    }
     
     var body: some View {
-        AsyncImage(url: URL(string: imageUrl ?? "")) { image in
-            image
-                .resizable()
-                .aspectRatio(contentMode: .fill)
-        } placeholder: {
-            Rectangle()
-                .fill(Color.pairBackgroundSecondary)
-                .overlay {
-                    Image(systemName: "music.note")
-                        .font(.system(size: 48))
-                        .foregroundColor(.pairTextTertiary)
+        ZStack(alignment: .bottomTrailing) {
+            AsyncImage(url: URL(string: imageUrl ?? "")) { image in
+                image
+                    .resizable()
+                    .aspectRatio(contentMode: .fill)
+            } placeholder: {
+                Rectangle()
+                    .fill(Color.pairBackgroundSecondary)
+                    .overlay {
+                        Image(systemName: "music.note")
+                            .font(.system(size: 48))
+                            .foregroundColor(.pairTextTertiary)
+                    }
+            }
+            .frame(width: size, height: size)
+            .cornerRadius(24)
+            .shadow(color: Color.black.opacity(0.1), radius: 20, x: 0, y: 10)
+            
+            // Play/Pause button overlay
+            if let previewUrl = previewUrl, let trackId = trackId {
+                Button {
+                    if isPlaying {
+                        audioPlayer.pause()
+                    } else {
+                        audioPlayer.play(url: previewUrl, trackId: trackId)
+                    }
+                } label: {
+                    Image(systemName: isPlaying ? "pause.fill" : "play.fill")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(.white)
+                        .frame(width: 44, height: 44)
+                        .background(
+                            Circle()
+                                .fill(Color.black.opacity(0.6))
+                        )
                 }
+                .padding(16)
+            }
         }
-        .frame(width: size, height: size)
-        .cornerRadius(24)
-        .shadow(color: Color.black.opacity(0.1), radius: 20, x: 0, y: 10)
     }
 }
 

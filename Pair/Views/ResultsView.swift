@@ -443,24 +443,53 @@ struct SwipeCard: View {
     let showLikeBadge: Bool
     let showPassBadge: Bool
     
+    @EnvironmentObject var audioPlayer: AudioPlayer
+    
+    private var isPlaying: Bool {
+        return audioPlayer.currentTrackId == result.trackId && audioPlayer.isPlaying
+    }
+    
     var body: some View {
         ZStack(alignment: .bottom) {
             // Album artwork background
-            AsyncImage(url: URL(string: result.albumArtUrl ?? "")) { image in
-                image
-                    .resizable()
-                    .aspectRatio(contentMode: .fill)
-            } placeholder: {
-                Rectangle()
-                    .fill(Color.pairBackgroundSecondary)
-                    .overlay {
-                        Image(systemName: "music.note")
-                            .font(.system(size: 48))
-                            .foregroundColor(.pairTextTertiary)
+            ZStack(alignment: .bottomTrailing) {
+                AsyncImage(url: URL(string: result.albumArtUrl ?? "")) { image in
+                    image
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                } placeholder: {
+                    Rectangle()
+                        .fill(Color.pairBackgroundSecondary)
+                        .overlay {
+                            Image(systemName: "music.note")
+                                .font(.system(size: 48))
+                                .foregroundColor(.pairTextTertiary)
+                        }
+                }
+                .frame(width: UIScreen.main.bounds.width - 48, height: 450)
+                .clipped()
+                
+                // Play/Pause button overlay
+                if let previewUrl = result.previewUrl, isTopCard {
+                    Button {
+                        if isPlaying {
+                            audioPlayer.pause()
+                        } else {
+                            audioPlayer.play(url: previewUrl, trackId: result.trackId)
+                        }
+                    } label: {
+                        Image(systemName: isPlaying ? "pause.fill" : "play.fill")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundColor(.white)
+                            .frame(width: 44, height: 44)
+                            .background(
+                                Circle()
+                                    .fill(Color.black.opacity(0.6))
+                            )
                     }
+                    .padding(16)
+                }
             }
-            .frame(width: UIScreen.main.bounds.width - 48, height: 450)
-            .clipped()
             
             // Gradient overlay for text readability
             LinearGradient(
