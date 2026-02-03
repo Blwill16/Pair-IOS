@@ -106,51 +106,116 @@ struct ProfileView: View {
                         
                         // Profile avatar and info
                         VStack(spacing: 12) {
-                            // Avatar placeholder
+                            // Avatar - 96px circle per Figma
                             Circle()
-                                .stroke(Color.pairCardBorder, lineWidth: 1)
-                                .frame(width: 80, height: 80)
+                                .stroke(Color.pairCardBorder, lineWidth: 2)
+                                .frame(width: 96, height: 96)
                                 .overlay {
-                                    Image(systemName: "person")
-                                        .font(.system(size: 32))
+                                    Image(systemName: "person.fill")
+                                        .font(.system(size: 40))
                                         .foregroundColor(.pairTextTertiary)
                                 }
+                                .shadow(color: Color.black.opacity(0.05), radius: 8, y: 2)
                             
                             // Name
                             Text("Jordan Moss")
                                 .font(.system(size: 28, weight: .bold))
                                 .foregroundColor(.pairTextPrimary)
                             
-                            // Pairing count
-                            Text("12 pairings")
-                                .font(.subheadline)
-                                .foregroundColor(.pairTextSecondary)
-                            
-                            // Bio
-                            Text("Music for late drives and early mornings")
+                            // Bio - italic per Figma
+                            Text("Curator of late-night drives and rainy day moods")
                                 .font(.body)
+                                .italic()
                                 .foregroundColor(.pairTextSecondary)
                                 .multilineTextAlignment(.center)
-                                .padding(.horizontal, 40)
+                                .frame(maxWidth: 320)
                         }
-                        .padding(.bottom, 32)
+                        .padding(.bottom, 16)
                         
-                        // Published Pairings section
+                        // Stats row per Figma
+                        HStack(spacing: 0) {
+                            Spacer()
+                            
+                            // Pairings stat
+                            VStack(spacing: 4) {
+                                Text("24")
+                                    .font(.system(size: 24, weight: .bold))
+                                    .foregroundColor(.pairTextPrimary)
+                                Text("Pairings")
+                                    .font(.caption)
+                                    .foregroundColor(.pairTextSecondary)
+                            }
+                            
+                            Spacer()
+                            
+                            // Divider
+                            Rectangle()
+                                .fill(Color.pairCardBorder)
+                                .frame(width: 1, height: 40)
+                            
+                            Spacer()
+                            
+                            // Followers stat
+                            VStack(spacing: 4) {
+                                Text("156")
+                                    .font(.system(size: 24, weight: .bold))
+                                    .foregroundColor(.pairTextPrimary)
+                                Text("Followers")
+                                    .font(.caption)
+                                    .foregroundColor(.pairTextSecondary)
+                            }
+                            
+                            Spacer()
+                            
+                            // Divider
+                            Rectangle()
+                                .fill(Color.pairCardBorder)
+                                .frame(width: 1, height: 40)
+                            
+                            Spacer()
+                            
+                            // Following stat
+                            VStack(spacing: 4) {
+                                Text("89")
+                                    .font(.system(size: 24, weight: .bold))
+                                    .foregroundColor(.pairTextPrimary)
+                                Text("Following")
+                                    .font(.caption)
+                                    .foregroundColor(.pairTextSecondary)
+                            }
+                            
+                            Spacer()
+                        }
+                        .padding(.vertical, 24)
+                        .overlay(
+                            VStack {
+                                Divider()
+                                Spacer()
+                                Divider()
+                            }
+                        )
+                        .padding(.bottom, 24)
+                        
+                        // Published Pairings section - 2 column grid per Figma
                         VStack(alignment: .leading, spacing: 16) {
-                            Text("Published Pairings")
-                                .font(.headline)
-                                .foregroundColor(.pairTextPrimary)
+                            Text("Pairings")
+                                .font(.subheadline)
+                                .foregroundColor(.pairTextSecondary)
                                 .padding(.horizontal, 24)
                             
-                            LazyVStack(spacing: 16) {
+                            // 2-column grid per Figma
+                            LazyVGrid(columns: [
+                                GridItem(.flexible(), spacing: 12),
+                                GridItem(.flexible(), spacing: 12)
+                            ], spacing: 12) {
                                 ForEach(mockProfilePlaylists) { playlist in
-                                    ProfilePlaylistCard(playlist: playlist)
+                                    ProfilePlaylistGridCard(playlist: playlist)
                                 }
                                 
                                 // Also show real playlists if any
                                 if let realProfile = profile, let playlists = realProfile.playlists {
                                     ForEach(playlists) { playlist in
-                                        ProfilePlaylistRow(playlist: playlist)
+                                        ProfilePlaylistGridCardReal(playlist: playlist)
                                             .contentShape(Rectangle())
                                             .onTapGesture {
                                                 selectedPlaylist = playlist
@@ -345,7 +410,110 @@ struct EditProfileSheet: View {
     }
 }
 
-// MARK: - Profile Playlist Card (for mock data)
+// MARK: - Profile Playlist Grid Card (compact square card per Figma)
+struct ProfilePlaylistGridCard: View {
+    let playlist: MockProfilePlaylist
+    @State private var isPressed = false
+    
+    var body: some View {
+        ZStack(alignment: .bottomLeading) {
+            // Cover image - full bleed
+            AsyncImage(url: URL(string: playlist.imageUrl)) { image in
+                image
+                    .resizable()
+                    .aspectRatio(contentMode: .fill)
+            } placeholder: {
+                Rectangle()
+                    .fill(Color.pairBackgroundSecondary)
+                    .overlay {
+                        Image(systemName: "music.note")
+                            .font(.system(size: 32))
+                            .foregroundColor(.pairTextTertiary)
+                    }
+            }
+            .frame(minWidth: 0, maxWidth: .infinity)
+            .aspectRatio(1, contentMode: .fill)
+            .clipped()
+            
+            // Gradient overlay for text readability
+            LinearGradient(
+                colors: [Color.clear, Color.black.opacity(0.7)],
+                startPoint: .center,
+                endPoint: .bottom
+            )
+            
+            // Text overlay
+            VStack(alignment: .leading, spacing: 4) {
+                Text(playlist.title)
+                    .font(.caption)
+                    .fontWeight(.semibold)
+                    .foregroundColor(.white)
+                    .lineLimit(1)
+                
+                Text("\(playlist.trackCount) tracks")
+                    .font(.caption2)
+                    .foregroundColor(.white.opacity(0.8))
+            }
+            .padding(12)
+        }
+        .aspectRatio(1, contentMode: .fit)
+        .cornerRadius(12)
+        .scaleEffect(isPressed ? 1.03 : 1.0)
+        .animation(.easeOut(duration: 0.2), value: isPressed)
+        .onLongPressGesture(minimumDuration: .infinity, pressing: { pressing in
+            isPressed = pressing
+        }, perform: {})
+    }
+}
+
+// MARK: - Profile Playlist Grid Card for Real Data
+struct ProfilePlaylistGridCardReal: View {
+    let playlist: Playlist
+    @State private var isPressed = false
+    
+    var body: some View {
+        ZStack(alignment: .bottomLeading) {
+            // Placeholder cover
+            Rectangle()
+                .fill(Color.pairBackgroundSecondary)
+                .overlay {
+                    Image(systemName: "music.note.list")
+                        .font(.system(size: 32))
+                        .foregroundColor(.pairTextTertiary)
+                }
+            
+            // Gradient overlay
+            LinearGradient(
+                colors: [Color.clear, Color.black.opacity(0.7)],
+                startPoint: .center,
+                endPoint: .bottom
+            )
+            
+            // Text overlay
+            VStack(alignment: .leading, spacing: 4) {
+                Text(playlist.title)
+                    .font(.caption)
+                    .fontWeight(.semibold)
+                    .foregroundColor(.white)
+                    .lineLimit(1)
+                
+                Text("\(playlist.tracks?.count ?? 0) tracks")
+                    .font(.caption2)
+                    .foregroundColor(.white.opacity(0.8))
+            }
+            .padding(12)
+        }
+        .aspectRatio(1, contentMode: .fit)
+        .cornerRadius(12)
+        .scaleEffect(isPressed ? 1.03 : 1.0)
+        .animation(.easeOut(duration: 0.2), value: isPressed)
+        .onLongPressGesture(minimumDuration: .infinity, pressing: { pressing in
+            isPressed = pressing
+        }, perform: {})
+    }
+}
+
+// MARK: - Profile Playlist Card (legacy - for list view)
 struct ProfilePlaylistCard: View {
     let playlist: MockProfilePlaylist
     
