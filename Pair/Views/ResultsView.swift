@@ -78,7 +78,7 @@ struct ResultsView: View {
                 .cornerRadius(8)
                 
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Based on")
+                    Text("Fresh pairings for")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                     Text(pairResponse.seed.trackName)
