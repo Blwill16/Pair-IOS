@@ -10,44 +10,84 @@ struct ResultsView: View {
     @EnvironmentObject var navigationState: NavigationState
     @Environment(\.dismiss) private var dismiss
     
-    @State private var savedTrackIds: Set<String> = []
+    @State private var currentCardIndex = 0
+    @State private var cardOffset: CGSize = .zero
+    @State private var cardRotation: Double = 0
+    @State private var showLikeBadge = false
+    @State private var showPassBadge = false
+    @State private var likedTracks: [PairingResult] = []
     @State private var showSavePlaylistSheet = false
     @State private var playlistTitle = ""
     @State private var isSavingPlaylist = false
     @State private var showPlaylistSaved = false
     @State private var errorMessage: String?
+    @State private var showEmptyState = false
     
     private let apiService = APIService.shared
+    private let hapticFeedback = UIImpactFeedbackGenerator(style: .medium)
+    private let swipeThreshold: CGFloat = 150
+    
+    // Get mood color for the seed track
+    private var moodColor: Color {
+        MoodColorHelper.getMoodColor(for: pairResponse.seed)
+    }
     
     var body: some View {
         ZStack {
             Color.pairBackground.ignoresSafeArea()
             
             VStack(spacing: 0) {
+                // Header
                 headerSection
                 
-                resultsList
+                Spacer()
                 
-                if authManager.isAuthenticated {
-                    savePlaylistButton
+                // Card stack or empty state
+                if showEmptyState {
+                    emptyStateView
+                } else {
+                    cardStackView
                 }
+                
+                Spacer()
+                
+                // Action buttons
+                if !showEmptyState {
+                    actionButtonsView
+                }
+            }
+            
+            // Back button overlay
+            VStack {
+                HStack {
+                    Button {
+                        dismiss()
+                    } label: {
+                        HStack(spacing: 4) {
+                            Image(systemName: "chevron.left")
+                                .font(.system(size: 14))
+                            Text("Back")
+                                .font(.subheadline)
+                        }
+                        .foregroundColor(.pairTextSecondary)
+                    }
+                    .padding(.leading, 24)
+                    .padding(.top, 16)
+                    
+                    Spacer()
+                }
+                Spacer()
             }
         }
         .navigationTitle("")
-        .navigationBarTitleDisplayMode(.inline)
-        .navigationBarBackButtonHidden(true)
-        .toolbar {
-            ToolbarItem(placement: .navigationBarLeading) {
-                PairBackButton()
-            }
-        }
+        .navigationBarHidden(true)
         .sheet(isPresented: $showSavePlaylistSheet) {
             savePlaylistSheet
         }
         .alert("Playlist Saved", isPresented: $showPlaylistSaved) {
             Button("OK", role: .cancel) {}
         } message: {
-            Text("Your playlist has been saved and published!")
+            Text("Your playlist has been saved!")
         }
         .onAppear {
             navigationState.hideNavBar()
@@ -57,102 +97,170 @@ struct ResultsView: View {
         }
     }
     
-    private var savePlaylistButton: some View {
-        VStack(spacing: 0) {
-            Button {
-                showSavePlaylistSheet = true
-            } label: {
-                HStack(spacing: 10) {
-                    Image(systemName: "square.and.arrow.up")
-                        .font(.system(size: 16))
-                    Text("Save & Share Playlist")
-                        .fontWeight(.semibold)
-                }
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 16)
-                .background(Color.pairPurple)
-                .foregroundColor(.white)
-                .cornerRadius(14)
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 16)
-            .background(
-                Color.pairBackground
-                    .shadow(color: Color.black.opacity(0.3), radius: 20, y: -10)
-            )
-        }
-    }
-    
+    // MARK: - Header Section
     private var headerSection: some View {
         VStack(spacing: 12) {
-            HStack(spacing: 14) {
-                AsyncImage(url: URL(string: pairResponse.seed.albumArtUrl ?? "")) { image in
-                    image
-                        .resizable()
-                        .aspectRatio(contentMode: .fill)
-                } placeholder: {
-                    Rectangle()
-                        .fill(Color.white.opacity(0.1))
-                }
-                .frame(width: 64, height: 64)
-                .cornerRadius(10)
-                
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Fresh pairings for")
-                        .font(.caption)
-                        .foregroundColor(.pairTextSecondary)
-                    Text(pairResponse.seed.trackName)
-                        .font(.subheadline)
-                        .fontWeight(.semibold)
-                        .foregroundColor(.white)
-                        .lineLimit(1)
-                    Text(pairResponse.seed.artistName)
-                        .font(.caption)
-                        .foregroundColor(.pairTextSecondary)
-                }
-                
-                Spacer()
-                
-                VStack(alignment: .trailing, spacing: 4) {
-                    Text(mode.displayName)
-                        .font(.caption)
-                        .fontWeight(.medium)
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 5)
-                        .background(Color.pairPurple.opacity(0.2))
-                        .foregroundColor(.pairPurple)
-                        .cornerRadius(8)
-                    
-                    Text("\(pairResponse.results.count) tracks")
-                        .font(.caption)
-                        .foregroundColor(.pairTextTertiary)
-                }
+            Text("\(pairResponse.seed.trackName) Pairing")
+                .font(.title2)
+                .fontWeight(.bold)
+                .foregroundColor(.pairTextPrimary)
+                .multilineTextAlignment(.center)
+            
+            if !promptText.isEmpty {
+                Text(promptText)
+                    .font(.caption)
+                    .foregroundColor(.pairTextSecondary)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .background(
+                        Capsule()
+                            .fill(Color.pairBackgroundSecondary)
+                    )
             }
-            .padding(16)
-            .background(Color.white.opacity(0.05))
-            .cornerRadius(16)
-            .padding(.horizontal, 16)
-            .padding(.top, 60)
         }
+        .padding(.top, 60)
+        .padding(.horizontal, 24)
     }
     
-    private var resultsList: some View {
-        ScrollView {
-            LazyVStack(spacing: 0) {
-                ForEach(Array(pairResponse.results.enumerated()), id: \.element.id) { index, result in
-                    ResultRowView(
+    // MARK: - Card Stack View
+    private var cardStackView: some View {
+        ZStack {
+            // Show up to 3 cards in the stack
+            ForEach(Array(pairResponse.results.enumerated().reversed()), id: \.element.id) { index, result in
+                if index >= currentCardIndex && index < currentCardIndex + 3 {
+                    let stackPosition = index - currentCardIndex
+                    
+                    SwipeCard(
                         result: result,
-                        rank: index + 1,
-                        isSaved: savedTrackIds.contains(result.trackId),
-                        onSave: { saveTrack(result) },
-                        onOpenSpotify: { openInSpotify(result.spotifyUrl) }
+                        moodColor: moodColor,
+                        isTopCard: stackPosition == 0,
+                        offset: stackPosition == 0 ? cardOffset : .zero,
+                        rotation: stackPosition == 0 ? cardRotation : 0,
+                        showLikeBadge: stackPosition == 0 && showLikeBadge,
+                        showPassBadge: stackPosition == 0 && showPassBadge
+                    )
+                    .scaleEffect(stackPosition == 0 ? 1.0 : 0.95 - CGFloat(stackPosition) * 0.02)
+                    .offset(y: CGFloat(stackPosition) * 8)
+                    .opacity(stackPosition == 0 ? 1.0 : 0.9 - Double(stackPosition) * 0.1)
+                    .zIndex(Double(pairResponse.results.count - index))
+                    .gesture(
+                        stackPosition == 0 ? DragGesture()
+                            .onChanged { gesture in
+                                cardOffset = gesture.translation
+                                cardRotation = Double(gesture.translation.width / 20)
+                                
+                                // Show badges based on drag direction
+                                showLikeBadge = gesture.translation.width > 50
+                                showPassBadge = gesture.translation.width < -50
+                            }
+                            .onEnded { gesture in
+                                handleSwipeEnd(gesture: gesture)
+                            }
+                        : nil
                     )
                 }
             }
-            .padding(.top, 8)
         }
+        .frame(height: 450)
+        .padding(.horizontal, 24)
     }
     
+    // MARK: - Action Buttons
+    private var actionButtonsView: some View {
+        HStack(spacing: 24) {
+            // Pass button
+            Button {
+                hapticFeedback.impactOccurred()
+                swipeLeft()
+            } label: {
+                Image(systemName: "xmark")
+                    .font(.system(size: 24, weight: .medium))
+                    .foregroundColor(.red.opacity(0.8))
+                    .frame(width: 64, height: 64)
+                    .background(
+                        Circle()
+                            .fill(Color.pairCardBackground)
+                    )
+                    .overlay(
+                        Circle()
+                            .stroke(Color.pairCardBorder, lineWidth: 2)
+                    )
+                    .shadow(color: Color.black.opacity(0.05), radius: 8, y: 2)
+            }
+            
+            // Like button
+            Button {
+                hapticFeedback.impactOccurred()
+                swipeRight()
+            } label: {
+                Image(systemName: "heart.fill")
+                    .font(.system(size: 24, weight: .medium))
+                    .foregroundColor(.white)
+                    .frame(width: 64, height: 64)
+                    .background(
+                        Circle()
+                            .fill(Color.pairPurple)
+                    )
+                    .shadow(color: Color.pairPurple.opacity(0.3), radius: 16, y: 4)
+            }
+            
+            // Info button
+            Button {
+                // Show more info about current track
+            } label: {
+                Image(systemName: "info")
+                    .font(.system(size: 20, weight: .medium))
+                    .foregroundColor(.pairTextSecondary)
+                    .frame(width: 48, height: 48)
+                    .background(
+                        Circle()
+                            .fill(Color.pairBackgroundSecondary)
+                    )
+            }
+        }
+        .padding(.bottom, 40)
+    }
+    
+    // MARK: - Empty State
+    private var emptyStateView: some View {
+        VStack(spacing: 20) {
+            Image(systemName: "checkmark.circle.fill")
+                .font(.system(size: 64))
+                .foregroundColor(.pairPurple)
+            
+            Text("All done!")
+                .font(.title2)
+                .fontWeight(.bold)
+                .foregroundColor(.pairTextPrimary)
+            
+            Text("You liked \(likedTracks.count) tracks")
+                .font(.body)
+                .foregroundColor(.pairTextSecondary)
+            
+            if !likedTracks.isEmpty {
+                Button {
+                    showSavePlaylistSheet = true
+                } label: {
+                    Text("Save as Playlist")
+                        .font(.body)
+                        .fontWeight(.medium)
+                        .foregroundColor(Color(hex: "1a1230"))
+                        .padding(.horizontal, 32)
+                        .padding(.vertical, 16)
+                        .background(
+                            Capsule()
+                                .fill(Color.pairPurple)
+                        )
+                        .shadow(color: Color.pairPurple.opacity(0.25), radius: 16, y: 4)
+                }
+                .padding(.top, 8)
+            }
+        }
+        .opacity(showEmptyState ? 1 : 0)
+        .animation(.easeIn(duration: 0.4), value: showEmptyState)
+    }
+    
+    // MARK: - Save Playlist Sheet
     private var savePlaylistSheet: some View {
         NavigationStack {
             VStack(spacing: 24) {
@@ -183,19 +291,10 @@ struct ResultsView: View {
                         }
                         .font(.subheadline)
                         
-                        if !promptText.isEmpty {
-                            HStack(alignment: .top) {
-                                Text("Prompt:")
-                                    .foregroundStyle(.secondary)
-                                Text(promptText)
-                            }
-                            .font(.subheadline)
-                        }
-                        
                         HStack {
-                            Text("Tracks:")
+                            Text("Liked tracks:")
                                 .foregroundStyle(.secondary)
-                            Text("\(pairResponse.results.count)")
+                            Text("\(likedTracks.count)")
                         }
                         .font(.subheadline)
                     }
@@ -233,24 +332,70 @@ struct ResultsView: View {
                             Text("Save")
                         }
                     }
-                    .disabled(isSavingPlaylist)
+                    .disabled(isSavingPlaylist || likedTracks.isEmpty)
                 }
             }
         }
         .presentationDetents([.medium])
     }
     
-    private func saveTrack(_ result: PairingResult) {
-        guard let userId = authManager.userId else { return }
+    // MARK: - Swipe Handling
+    private func handleSwipeEnd(gesture: DragGesture.Value) {
+        let horizontalAmount = gesture.translation.width
         
-        Task {
-            do {
-                try await apiService.saveTrack(userId: userId, track: result)
-                await MainActor.run {
-                    savedTrackIds.insert(result.trackId)
-                }
-            } catch {
-                print("Failed to save track: \(error)")
+        if horizontalAmount > swipeThreshold {
+            swipeRight()
+        } else if horizontalAmount < -swipeThreshold {
+            swipeLeft()
+        } else {
+            // Spring back to center
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
+                cardOffset = .zero
+                cardRotation = 0
+                showLikeBadge = false
+                showPassBadge = false
+            }
+        }
+    }
+    
+    private func swipeRight() {
+        // Like the current track
+        if currentCardIndex < pairResponse.results.count {
+            likedTracks.append(pairResponse.results[currentCardIndex])
+        }
+        
+        withAnimation(.easeOut(duration: 0.3)) {
+            cardOffset = CGSize(width: 500, height: 0)
+            cardRotation = 15
+        }
+        
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+            moveToNextCard()
+        }
+    }
+    
+    private func swipeLeft() {
+        withAnimation(.easeOut(duration: 0.3)) {
+            cardOffset = CGSize(width: -500, height: 0)
+            cardRotation = -15
+        }
+        
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+            moveToNextCard()
+        }
+    }
+    
+    private func moveToNextCard() {
+        cardOffset = .zero
+        cardRotation = 0
+        showLikeBadge = false
+        showPassBadge = false
+        
+        if currentCardIndex < pairResponse.results.count - 1 {
+            currentCardIndex += 1
+        } else {
+            withAnimation {
+                showEmptyState = true
             }
         }
     }
@@ -271,7 +416,7 @@ struct ResultsView: View {
                     seedTrackName: pairResponse.seed.trackName,
                     seedArtistName: pairResponse.seed.artistName,
                     mode: mode.rawValue,
-                    results: pairResponse.results
+                    results: likedTracks
                 )
                 
                 try await apiService.publishPlaylist(id: playlist.id, userId: userId)
@@ -289,10 +434,119 @@ struct ResultsView: View {
             }
         }
     }
+}
+
+// MARK: - Swipe Card Component
+struct SwipeCard: View {
+    let result: PairingResult
+    let moodColor: Color
+    let isTopCard: Bool
+    let offset: CGSize
+    let rotation: Double
+    let showLikeBadge: Bool
+    let showPassBadge: Bool
     
-    private func openInSpotify(_ urlString: String) {
-        guard let url = URL(string: urlString) else { return }
-        UIApplication.shared.open(url)
+    var body: some View {
+        ZStack(alignment: .bottom) {
+            // Album artwork background
+            AsyncImage(url: URL(string: result.albumArtUrl ?? "")) { image in
+                image
+                    .resizable()
+                    .aspectRatio(contentMode: .fill)
+            } placeholder: {
+                Rectangle()
+                    .fill(Color.pairBackgroundSecondary)
+                    .overlay {
+                        Image(systemName: "music.note")
+                            .font(.system(size: 48))
+                            .foregroundColor(.pairTextTertiary)
+                    }
+            }
+            .frame(width: UIScreen.main.bounds.width - 48, height: 450)
+            .clipped()
+            
+            // Gradient overlay for text readability
+            LinearGradient(
+                colors: [Color.clear, Color.black.opacity(0.7)],
+                startPoint: .center,
+                endPoint: .bottom
+            )
+            
+            // Song info
+            VStack(alignment: .leading, spacing: 8) {
+                Text(result.trackName)
+                    .font(.title2)
+                    .fontWeight(.bold)
+                    .foregroundColor(.white)
+                    .lineLimit(2)
+                
+                Text(result.artistName)
+                    .font(.body)
+                    .foregroundColor(.white.opacity(0.9))
+                
+                if let explanation = result.explanation {
+                    Text(explanation)
+                        .font(.caption)
+                        .italic()
+                        .foregroundColor(.white.opacity(0.7))
+                        .lineLimit(2)
+                        .padding(.top, 4)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(24)
+            
+            // Like badge (top-left)
+            if showLikeBadge {
+                VStack {
+                    HStack {
+                        Text("LIKE")
+                            .font(.title2)
+                            .fontWeight(.bold)
+                            .foregroundColor(.green)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 8)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 8)
+                                    .stroke(Color.green, lineWidth: 3)
+                            )
+                            .rotationEffect(.degrees(-15))
+                        Spacer()
+                    }
+                    .padding(24)
+                    Spacer()
+                }
+                .opacity(min(Double(offset.width) / 100, 1.0))
+            }
+            
+            // Pass badge (top-right)
+            if showPassBadge {
+                VStack {
+                    HStack {
+                        Spacer()
+                        Text("PASS")
+                            .font(.title2)
+                            .fontWeight(.bold)
+                            .foregroundColor(.red)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 8)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 8)
+                                    .stroke(Color.red, lineWidth: 3)
+                            )
+                            .rotationEffect(.degrees(15))
+                    }
+                    .padding(24)
+                    Spacer()
+                }
+                .opacity(min(Double(-offset.width) / 100, 1.0))
+            }
+        }
+        .frame(width: UIScreen.main.bounds.width - 48, height: 450)
+        .cornerRadius(24)
+        .shadow(color: moodColor.opacity(0.2), radius: 20, y: 10)
+        .offset(offset)
+        .rotationEffect(.degrees(rotation))
     }
 }
 
