@@ -119,6 +119,18 @@ struct ExploreView: View {
                         .padding(.horizontal, 24)
                         .padding(.bottom, 120)
                     }
+                    .background(
+                        GeometryReader { geo in
+                            Color.clear.preference(
+                                key: ScrollOffsetPreferenceKey.self,
+                                value: -geo.frame(in: .named("discoverScroll")).origin.y
+                            )
+                        }
+                    )
+                }
+                .coordinateSpace(name: "discoverScroll")
+                .onPreferenceChange(ScrollOffsetPreferenceKey.self) { offset in
+                    navigationState.handleScroll(scrollY: offset)
                 }
                 
                 if isLoading && allPlaylists.isEmpty && mockDiscoverPlaylists.isEmpty {
@@ -139,7 +151,7 @@ struct ExploreView: View {
             }
         }
         .onAppear {
-            // Nav bar always visible on main tabs for now
+            navigationState.resetScrollState()
         }
     }
     

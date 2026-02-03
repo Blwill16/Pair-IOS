@@ -28,6 +28,11 @@ class NavigationState: ObservableObject {
     @Published var isNavBarVisible: Bool = true
     @Published var isNavBarEnabled: Bool = true // Whether nav bar should show at all (false for full-screen experiences)
     
+    // Scroll tracking state
+    private var lastScrollY: CGFloat = 0
+    private var accumulatedDelta: CGFloat = 0
+    private let scrollThreshold: CGFloat = 30 // Amount of scroll needed to trigger hide/show
+    
     // Manually hide nav bar (for full-screen experiences like create pairing, results, settings)
     func hideNavBar() {
         withAnimation(.easeInOut(duration: 0.3)) {
@@ -41,6 +46,61 @@ class NavigationState: ObservableObject {
         withAnimation(.easeInOut(duration: 0.3)) {
             isNavBarEnabled = true
             isNavBarVisible = true
+        }
+    }
+    
+    // Handle scroll position changes for auto-hide behavior
+    // scrollY is the current scroll offset (positive = scrolled down)
+    func handleScroll(scrollY: CGFloat) {
+        guard isNavBarEnabled else { return }
+        
+        let delta = scrollY - lastScrollY
+        
+        // Near top of content - always show nav bar
+        if scrollY < 50 {
+            accumulatedDelta = 0
+            if !isNavBarVisible {
+                withAnimation(.easeInOut(duration: 0.3)) {
+                    isNavBarVisible = true
+                }
+            }
+            lastScrollY = scrollY
+            return
+        }
+        
+        // Accumulate scroll delta
+        accumulatedDelta += delta
+        
+        // Scrolling down - hide nav bar
+        if accumulatedDelta > scrollThreshold {
+            if isNavBarVisible {
+                withAnimation(.easeInOut(duration: 0.3)) {
+                    isNavBarVisible = false
+                }
+            }
+            accumulatedDelta = 0
+        }
+        // Scrolling up - show nav bar
+        else if accumulatedDelta < -scrollThreshold {
+            if !isNavBarVisible {
+                withAnimation(.easeInOut(duration: 0.3)) {
+                    isNavBarVisible = true
+                }
+            }
+            accumulatedDelta = 0
+        }
+        
+        lastScrollY = scrollY
+    }
+    
+    // Reset scroll tracking when switching tabs
+    func resetScrollState() {
+        lastScrollY = 0
+        accumulatedDelta = 0
+        if isNavBarEnabled && !isNavBarVisible {
+            withAnimation(.easeInOut(duration: 0.3)) {
+                isNavBarVisible = true
+            }
         }
     }
 }

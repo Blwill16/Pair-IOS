@@ -220,6 +220,18 @@ struct ProfileView: View {
                         }
                         .padding(.bottom, 120)
                     }
+                    .background(
+                        GeometryReader { geo in
+                            Color.clear.preference(
+                                key: ScrollOffsetPreferenceKey.self,
+                                value: -geo.frame(in: .named("profileScroll")).origin.y
+                            )
+                        }
+                    )
+                }
+                .coordinateSpace(name: "profileScroll")
+                .onPreferenceChange(ScrollOffsetPreferenceKey.self) { offset in
+                    navigationState.handleScroll(scrollY: offset)
                 }
                 
                 if isLoading && profile == nil {
@@ -245,7 +257,7 @@ struct ProfileView: View {
             }
         }
         .onAppear {
-            // Nav bar always visible on main tabs for now
+            navigationState.resetScrollState()
         }
     }
     
