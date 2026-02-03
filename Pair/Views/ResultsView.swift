@@ -91,6 +91,12 @@ struct ResultsView: View {
         }
         .onAppear {
             navigationState.hideNavBar()
+            // Auto-play the first card's preview
+            autoPlayCurrentCard()
+        }
+        .onDisappear {
+            // Stop audio when leaving the view
+            audioPlayer.stop()
         }
     }
     
@@ -390,10 +396,22 @@ struct ResultsView: View {
         
         if currentCardIndex < pairResponse.results.count - 1 {
             currentCardIndex += 1
+            // Auto-play the next card's preview
+            autoPlayCurrentCard()
         } else {
+            // Stop audio when done
+            audioPlayer.stop()
             withAnimation {
                 showEmptyState = true
             }
+        }
+    }
+    
+    private func autoPlayCurrentCard() {
+        guard currentCardIndex < pairResponse.results.count else { return }
+        let currentResult = pairResponse.results[currentCardIndex]
+        if let previewUrl = currentResult.previewUrl {
+            audioPlayer.play(url: previewUrl, trackId: currentResult.trackId)
         }
     }
     
@@ -450,77 +468,85 @@ struct SwipeCard: View {
     }
     
     var body: some View {
-        ZStack(alignment: .bottom) {
-            // Album artwork background
-            ZStack(alignment: .bottomTrailing) {
-                AsyncImage(url: URL(string: result.albumArtUrl ?? "")) { image in
-                    image
-                        .resizable()
-                        .aspectRatio(contentMode: .fill)
-                } placeholder: {
-                    Rectangle()
-                        .fill(Color.pairBackgroundSecondary)
-                        .overlay {
-                            Image(systemName: "music.note")
-                                .font(.system(size: 48))
-                                .foregroundColor(.pairTextTertiary)
-                        }
-                }
-                .frame(width: UIScreen.main.bounds.width - 48, height: 450)
-                .clipped()
-                
-                // Play/Pause button overlay
-                if let previewUrl = result.previewUrl, isTopCard {
-                    Button {
-                        if isPlaying {
-                            audioPlayer.pause()
-                        } else {
-                            audioPlayer.play(url: previewUrl, trackId: result.trackId)
-                        }
-                    } label: {
-                        Image(systemName: isPlaying ? "pause.fill" : "play.fill")
-                            .font(.system(size: 16, weight: .semibold))
-                            .foregroundColor(.white)
-                            .frame(width: 44, height: 44)
-                            .background(
-                                Circle()
-                                    .fill(Color.black.opacity(0.6))
-                            )
+        ZStack {
+            // White card background
+            VStack(spacing: 0) {
+                // Album artwork with play button
+                ZStack(alignment: .bottomTrailing) {
+                    AsyncImage(url: URL(string: result.albumArtUrl ?? "")) { image in
+                        image
+                            .resizable()
+                            .aspectRatio(contentMode: .fill)
+                    } placeholder: {
+                        Rectangle()
+                            .fill(Color.pairBackgroundSecondary)
+                            .overlay {
+                                Image(systemName: "music.note")
+                                    .font(.system(size: 48))
+                                    .foregroundColor(.pairTextTertiary)
+                            }
                     }
-                    .padding(16)
+                    .frame(width: UIScreen.main.bounds.width - 96, height: UIScreen.main.bounds.width - 96)
+                    .clipped()
+                    .cornerRadius(16)
+                    
+                    // Play/Pause button overlay
+                    if let previewUrl = result.previewUrl, isTopCard {
+                        Button {
+                            if isPlaying {
+                                audioPlayer.pause()
+                            } else {
+                                audioPlayer.play(url: previewUrl, trackId: result.trackId)
+                            }
+                        } label: {
+                            Image(systemName: isPlaying ? "pause.fill" : "play.fill")
+                                .font(.system(size: 16, weight: .semibold))
+                                .foregroundColor(.white)
+                                .frame(width: 44, height: 44)
+                                .background(
+                                    Circle()
+                                        .fill(Color.black.opacity(0.6))
+                                )
+                        }
+                        .padding(12)
+                    }
                 }
+                .padding(.horizontal, 16)
+                .padding(.top, 16)
+                
+                // Song info below artwork
+                VStack(spacing: 4) {
+                    Text(result.trackName)
+                        .font(.title3)
+                        .fontWeight(.bold)
+                        .foregroundColor(.pairTextPrimary)
+                        .lineLimit(1)
+                    
+                    Text(result.artistName)
+                        .font(.body)
+                        .foregroundColor(.pairTextSecondary)
+                    
+                    if let explanation = result.explanation {
+                        Text(explanation)
+                            .font(.caption)
+                            .italic()
+                            .foregroundColor(.pairTextTertiary)
+                            .lineLimit(2)
+                            .multilineTextAlignment(.center)
+                            .padding(.top, 4)
+                    }
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 16)
             }
-            
-            // Gradient overlay for text readability
-            LinearGradient(
-                colors: [Color.clear, Color.black.opacity(0.7)],
-                startPoint: .center,
-                endPoint: .bottom
+            .background(
+                RoundedRectangle(cornerRadius: 24)
+                    .fill(Color.pairCardBackground)
             )
-            
-            // Song info
-            VStack(alignment: .leading, spacing: 8) {
-                Text(result.trackName)
-                    .font(.title2)
-                    .fontWeight(.bold)
-                    .foregroundColor(.white)
-                    .lineLimit(2)
-                
-                Text(result.artistName)
-                    .font(.body)
-                    .foregroundColor(.white.opacity(0.9))
-                
-                if let explanation = result.explanation {
-                    Text(explanation)
-                        .font(.caption)
-                        .italic()
-                        .foregroundColor(.white.opacity(0.7))
-                        .lineLimit(2)
-                        .padding(.top, 4)
-                }
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(24)
+            .overlay(
+                RoundedRectangle(cornerRadius: 24)
+                    .stroke(Color.black.opacity(0.08), lineWidth: 1)
+            )
             
             // Like badge (top-left)
             if showLikeBadge {
@@ -568,9 +594,8 @@ struct SwipeCard: View {
                 .opacity(min(Double(-offset.width) / 100, 1.0))
             }
         }
-        .frame(width: UIScreen.main.bounds.width - 48, height: 450)
-        .cornerRadius(24)
-        .shadow(color: moodColor.opacity(0.2), radius: 20, y: 10)
+        .frame(width: UIScreen.main.bounds.width - 48)
+        .shadow(color: Color.black.opacity(0.06), radius: 12, y: 4)
         .offset(offset)
         .rotationEffect(.degrees(rotation))
     }
