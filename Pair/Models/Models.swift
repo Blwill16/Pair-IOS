@@ -212,3 +212,17 @@ struct User: Codable {
     let id: String
     let email: String?
 }
+
+// PairTrack is used for local/unsaved pairing results from the API
+struct PairTrack: Codable, Identifiable, Hashable {
+    let apple_music_id: String
+    let track_name: String
+    let artist_name: String
+    let album_art_url: String?
+    let preview_url: String?
+    let duration_ms: Int?
+    let score: Double?
+    let explanation: String?
+    
+    var id: String { apple_music_id }
+}
