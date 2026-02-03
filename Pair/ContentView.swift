@@ -64,6 +64,8 @@ struct AuthView: View {
     @State private var email = ""
     @State private var showMagicLinkSent = false
     @State private var errorMessage: String?
+    @State private var isEmailFocused = false
+    @State private var appearAnimation = false
     
     var body: some View {
         ZStack {
@@ -72,108 +74,141 @@ struct AuthView: View {
             VStack(spacing: 0) {
                 Spacer()
                 
-                // Logo and tagline
-                VStack(spacing: 16) {
+                // Logo and tagline with entrance animation
+                VStack(spacing: 20) {
+                    // Logo with glow effect
                     PairLogo(size: 80)
-                        .breathingAnimation(duration: 4, scale: 1.03)
+                        .logoGlow()
                     
+                    // Brand name
                     Text("Pair")
-                        .font(.system(size: 42, weight: .bold))
+                        .font(.system(size: 48, weight: .bold))
                         .foregroundColor(.white)
                     
-                    VStack(spacing: 4) {
-                        Text("Music finds you here.")
-                            .font(.subheadline)
-                            .foregroundColor(.pairTextSecondary)
-                        Text("Start with a song, discover what's next.")
-                            .font(.subheadline)
-                            .foregroundColor(.pairTextSecondary)
-                    }
+                    // Tagline - per Figma: "Discover music that belongs together"
+                    Text("Discover music that belongs together")
+                        .font(.body)
+                        .foregroundColor(.white.opacity(0.7))
                 }
-                .padding(.bottom, 48)
+                .opacity(appearAnimation ? 1 : 0)
+                .offset(y: appearAnimation ? 0 : 20)
+                .animation(.easeOut(duration: 0.6), value: appearAnimation)
+                .padding(.bottom, 60)
                 
-                // Login card
-                VStack(spacing: 20) {
-                    // Spotify button
+                // Auth section
+                VStack(spacing: 24) {
+                    // Spotify button - Primary action per Figma
                     Button {
                         // Spotify login would go here
                         authManager.continueAsGuest()
                     } label: {
-                        HStack(spacing: 12) {
+                        HStack(spacing: 10) {
                             Image(systemName: "music.note")
-                                .font(.system(size: 18))
+                                .font(.system(size: 20))
                             Text("Continue with Spotify")
-                                .font(.headline)
+                                .font(.body)
+                                .fontWeight(.medium)
                         }
-                        .foregroundColor(.white)
+                        .foregroundColor(Color(hex: "1a1230")) // Dark text for contrast per Figma
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 16)
                         .background(
-                            RoundedRectangle(cornerRadius: 12)
-                                .fill(Color.white.opacity(0.15))
+                            Capsule()
+                                .fill(Color.pairPurple)
                         )
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 12)
-                                .stroke(Color.white.opacity(0.2), lineWidth: 1)
-                        )
+                        .shadow(color: Color.pairPurple.opacity(0.25), radius: 24, x: 0, y: 6)
                     }
+                    .scaleEffect(appearAnimation ? 1 : 0.95)
+                    .opacity(appearAnimation ? 1 : 0)
+                    .animation(.easeOut(duration: 0.6).delay(0.2), value: appearAnimation)
                     
-                    // Divider
+                    // Divider with "or continue with email"
                     HStack(spacing: 16) {
                         Rectangle()
-                            .fill(Color.white.opacity(0.2))
+                            .fill(Color.white.opacity(0.15))
                             .frame(height: 1)
-                        Text("or")
+                        Text("or continue with email")
                             .font(.caption)
-                            .foregroundColor(.pairTextTertiary)
+                            .foregroundColor(.white.opacity(0.5))
                         Rectangle()
-                            .fill(Color.white.opacity(0.2))
+                            .fill(Color.white.opacity(0.15))
                             .frame(height: 1)
                     }
+                    .opacity(appearAnimation ? 1 : 0)
+                    .animation(.easeOut(duration: 0.6).delay(0.3), value: appearAnimation)
                     
-                    // Email input
-                    TextField("Email", text: $email)
-                        .textFieldStyle(GlassTextFieldStyle())
-                        .textContentType(.emailAddress)
-                        .keyboardType(.emailAddress)
-                        .autocapitalization(.none)
-                    
-                    // Magic link button
-                    Button {
-                        Task {
-                            do {
-                                try await authManager.signInWithMagicLink(email: email)
-                                showMagicLinkSent = true
-                            } catch {
-                                errorMessage = error.localizedDescription
-                            }
-                        }
-                    } label: {
-                        Text("Send Magic Link")
-                            .font(.headline)
+                    // Email input with focus state
+                    VStack(spacing: 16) {
+                        TextField("", text: $email, prompt: Text("your@email.com").foregroundColor(.white.opacity(0.4)))
+                            .textContentType(.emailAddress)
+                            .keyboardType(.emailAddress)
+                            .autocapitalization(.none)
                             .foregroundColor(.white)
-                            .frame(maxWidth: .infinity)
+                            .padding(.horizontal, 20)
                             .padding(.vertical, 16)
                             .background(
-                                RoundedRectangle(cornerRadius: 12)
-                                    .fill(email.isEmpty ? Color.pairPurple.opacity(0.5) : Color.pairPurple)
+                                RoundedRectangle(cornerRadius: 16)
+                                    .fill(Color.white.opacity(0.08))
                             )
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 16)
+                                    .stroke(
+                                        isEmailFocused ? Color.pairPurple.opacity(0.5) : Color.white.opacity(0.15),
+                                        lineWidth: isEmailFocused ? 2 : 1
+                                    )
+                            )
+                            .shadow(
+                                color: isEmailFocused ? Color.pairPurple.opacity(0.12) : Color.clear,
+                                radius: 16, x: 0, y: 4
+                            )
+                            .onTapGesture {
+                                isEmailFocused = true
+                            }
+                        
+                        // Magic link button - Secondary style per Figma
+                        Button {
+                            Task {
+                                do {
+                                    try await authManager.signInWithMagicLink(email: email)
+                                    showMagicLinkSent = true
+                                } catch {
+                                    errorMessage = error.localizedDescription
+                                }
+                            }
+                        } label: {
+                            Text("Send magic link")
+                                .font(.body)
+                                .fontWeight(.medium)
+                                .foregroundColor(.white)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 16)
+                                .background(
+                                    Capsule()
+                                        .fill(Color.white.opacity(0.1))
+                                )
+                                .overlay(
+                                    Capsule()
+                                        .stroke(Color.white.opacity(0.2), lineWidth: 1)
+                                )
+                        }
+                        .disabled(email.isEmpty)
+                        .opacity(email.isEmpty ? 0.5 : 1)
                     }
-                    .disabled(email.isEmpty)
+                    .opacity(appearAnimation ? 1 : 0)
+                    .animation(.easeOut(duration: 0.6).delay(0.4), value: appearAnimation)
                     
-                    // Continue as guest
+                    // Continue as guest - subtle link
                     Button {
                         authManager.continueAsGuest()
                     } label: {
                         Text("Continue as guest")
                             .font(.subheadline)
-                            .foregroundColor(.pairTextSecondary)
+                            .foregroundColor(.white.opacity(0.5))
                     }
                     .padding(.top, 8)
+                    .opacity(appearAnimation ? 1 : 0)
+                    .animation(.easeOut(duration: 0.6).delay(0.5), value: appearAnimation)
                 }
-                .padding(.horizontal, 24)
-                .padding(.vertical, 32)
-                .glassCard()
                 .padding(.horizontal, 24)
                 
                 if let error = errorMessage {
@@ -186,13 +221,20 @@ struct AuthView: View {
                 Spacer()
                 
                 // Footer
-                Text("By continuing, you agree to our use of music discovery magic")
+                Text("By continuing, you agree to our Terms and Privacy Policy")
                     .font(.caption2)
-                    .foregroundColor(.pairTextTertiary)
+                    .foregroundColor(.white.opacity(0.35))
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, 32)
                     .padding(.bottom, 32)
             }
+        }
+        .onAppear {
+            appearAnimation = true
+        }
+        .onTapGesture {
+            isEmailFocused = false
+            UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
         }
         .alert("Check your email", isPresented: $showMagicLinkSent) {
             Button("OK", role: .cancel) {}

@@ -92,88 +92,99 @@ struct PairLogo: View {
     }
 }
 
+// MARK: - Film Grain Texture Overlay
+struct FilmGrainOverlay: View {
+    @State private var noiseOffset: CGFloat = 0
+    
+    var body: some View {
+        GeometryReader { geometry in
+            Canvas { context, size in
+                // Create noise pattern
+                for _ in 0..<Int(size.width * size.height * 0.003) {
+                    let x = CGFloat.random(in: 0..<size.width)
+                    let y = CGFloat.random(in: 0..<size.height)
+                    let opacity = Double.random(in: 0.02...0.06)
+                    
+                    context.fill(
+                        Path(ellipseIn: CGRect(x: x, y: y, width: 1.5, height: 1.5)),
+                        with: .color(Color.white.opacity(opacity))
+                    )
+                }
+            }
+            .blendMode(.overlay)
+        }
+        .allowsHitTesting(false)
+    }
+}
+
 // MARK: - Animated Gradient Background (Login screen only)
 struct AnimatedGradientBackground: View {
-    @State private var animateOrb1 = false
-    @State private var animateOrb2 = false
-    @State private var animateOrb3 = false
-    @State private var animateOrb4 = false
+    @State private var animateGradient = false
     
     var body: some View {
         ZStack {
+            // Base dark background
             Color.pairBackgroundDark
                 .ignoresSafeArea()
             
-            // Purple orb
-            Circle()
-                .fill(
-                    RadialGradient(
-                        colors: [Color.pairPurple.opacity(0.4), Color.clear],
-                        center: .center,
-                        startRadius: 0,
-                        endRadius: 200
-                    )
-                )
-                .frame(width: 400, height: 400)
-                .offset(x: animateOrb1 ? 50 : -50, y: animateOrb1 ? -100 : 100)
-                .blur(radius: 60)
+            // Animated radial gradient - slow drift (30s as per Figma spec)
+            RadialGradient(
+                colors: [
+                    Color.pairPurple.opacity(0.35),
+                    Color.pairPurple.opacity(0.15),
+                    Color.pairPurple.opacity(0.05),
+                    Color.clear
+                ],
+                center: animateGradient ? .topTrailing : .topLeading,
+                startRadius: 0,
+                endRadius: 500
+            )
+            .ignoresSafeArea()
+            .animation(.easeInOut(duration: 30).repeatForever(autoreverses: true), value: animateGradient)
             
-            // Orange orb
-            Circle()
-                .fill(
-                    RadialGradient(
-                        colors: [Color.orbOrange, Color.clear],
-                        center: .center,
-                        startRadius: 0,
-                        endRadius: 150
-                    )
-                )
-                .frame(width: 300, height: 300)
-                .offset(x: animateOrb2 ? -80 : 80, y: animateOrb2 ? 150 : -50)
-                .blur(radius: 50)
+            // Secondary subtle gradient for depth
+            RadialGradient(
+                colors: [
+                    Color.orbMagenta.opacity(0.15),
+                    Color.clear
+                ],
+                center: animateGradient ? .bottomLeading : .bottomTrailing,
+                startRadius: 0,
+                endRadius: 400
+            )
+            .ignoresSafeArea()
+            .animation(.easeInOut(duration: 25).repeatForever(autoreverses: true), value: animateGradient)
             
-            // Teal orb
-            Circle()
-                .fill(
-                    RadialGradient(
-                        colors: [Color.orbTeal, Color.clear],
-                        center: .center,
-                        startRadius: 0,
-                        endRadius: 180
-                    )
-                )
-                .frame(width: 350, height: 350)
-                .offset(x: animateOrb3 ? 100 : -30, y: animateOrb3 ? 50 : -150)
-                .blur(radius: 55)
-            
-            // Magenta orb
-            Circle()
-                .fill(
-                    RadialGradient(
-                        colors: [Color.orbMagenta, Color.clear],
-                        center: .center,
-                        startRadius: 0,
-                        endRadius: 120
-                    )
-                )
-                .frame(width: 250, height: 250)
-                .offset(x: animateOrb4 ? -60 : 60, y: animateOrb4 ? -80 : 120)
-                .blur(radius: 45)
+            // Film grain texture overlay (3% opacity, barely perceptible)
+            FilmGrainOverlay()
+                .opacity(0.03)
+                .ignoresSafeArea()
         }
         .onAppear {
-            withAnimation(.easeInOut(duration: 18).repeatForever(autoreverses: true)) {
-                animateOrb1 = true
-            }
-            withAnimation(.easeInOut(duration: 20).repeatForever(autoreverses: true).delay(2)) {
-                animateOrb2 = true
-            }
-            withAnimation(.easeInOut(duration: 16).repeatForever(autoreverses: true).delay(4)) {
-                animateOrb3 = true
-            }
-            withAnimation(.easeInOut(duration: 22).repeatForever(autoreverses: true).delay(1)) {
-                animateOrb4 = true
-            }
+            animateGradient = true
         }
+    }
+}
+
+// MARK: - Logo Glow Effect
+struct LogoGlowModifier: ViewModifier {
+    @State private var glowIntensity: Double = 0.4
+    
+    func body(content: Content) -> some View {
+        content
+            .shadow(color: Color.pairPurple.opacity(glowIntensity), radius: 40, x: 0, y: 0)
+            .shadow(color: Color.pairPurple.opacity(glowIntensity * 0.5), radius: 20, x: 0, y: 0)
+            .onAppear {
+                withAnimation(.easeInOut(duration: 3).repeatForever(autoreverses: true)) {
+                    glowIntensity = 0.6
+                }
+            }
+    }
+}
+
+extension View {
+    func logoGlow() -> some View {
+        modifier(LogoGlowModifier())
     }
 }
 
