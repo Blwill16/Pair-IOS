@@ -60,7 +60,7 @@ struct SearchView: View {
             }
             .navigationDestination(isPresented: $showPromptView) {
                 if let track = selectedTrack {
-                    PromptView(seedTrack: track)
+                    SongConfirmationView(track: track)
                 }
             }
         }
