@@ -5,6 +5,7 @@ struct PlaylistDetailView: View {
     
     @EnvironmentObject var authManager: AuthManager
     @EnvironmentObject var audioPlayer: AudioPlayer
+    @EnvironmentObject var remixManager: RemixManager
     @Environment(\.dismiss) private var dismiss
     
     @State private var playlist: Playlist?
@@ -61,7 +62,9 @@ struct PlaylistDetailView: View {
         }
         .sheet(isPresented: $showRemixSheet) {
             if let playlist = playlist {
-                RemixPromptSheet(playlist: playlist)
+                RemixPromptSheet(playlist: playlist) {
+                    remixManager.setRemix(from: playlist)
+                }
             }
         }
     }
@@ -204,6 +207,21 @@ struct PlaylistDetailView: View {
                 }
             }
             .font(.subheadline)
+            
+            Button {
+                showRemixSheet = true
+            } label: {
+                HStack {
+                    Image(systemName: "arrow.triangle.2.circlepath")
+                    Text("Remix")
+                }
+                .fontWeight(.medium)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 12)
+                .background(Color.purple.opacity(0.15))
+                .foregroundStyle(.purple)
+                .cornerRadius(10)
+            }
         }
         .padding()
     }
@@ -292,6 +310,7 @@ struct PlaylistTrackRow: View {
     let rank: Int
     
     @EnvironmentObject var audioPlayer: AudioPlayer
+    private let hapticFeedback = UIImpactFeedbackGenerator(style: .light)
     
     var body: some View {
         HStack(spacing: 12) {
@@ -324,6 +343,7 @@ struct PlaylistTrackRow: View {
             HStack(spacing: 8) {
                 if let previewUrl = track.previewUrl {
                     Button {
+                        hapticFeedback.impactOccurred()
                         audioPlayer.play(url: previewUrl, trackId: track.trackId)
                     } label: {
                         Image(systemName: audioPlayer.currentTrackId == track.trackId && audioPlayer.isPlaying ? "pause.circle.fill" : "play.circle.fill")
@@ -351,9 +371,9 @@ struct PlaylistTrackRow: View {
 
 struct RemixPromptSheet: View {
     let playlist: Playlist
+    let onRemix: () -> Void
     
     @Environment(\.dismiss) private var dismiss
-    @State private var navigateToSearch = false
     
     var body: some View {
         NavigationStack {
@@ -410,15 +430,19 @@ struct RemixPromptSheet: View {
                 Spacer()
                 
                 Button {
+                    onRemix()
                     dismiss()
                 } label: {
-                    Text("Start New Pairing")
-                        .fontWeight(.medium)
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(Color.purple)
-                        .foregroundColor(.white)
-                        .cornerRadius(12)
+                    HStack {
+                        Image(systemName: "arrow.triangle.2.circlepath")
+                        Text("Remix This Prompt")
+                    }
+                    .fontWeight(.semibold)
+                    .frame(maxWidth: .infinity)
+                    .padding()
+                    .background(Color.purple)
+                    .foregroundColor(.white)
+                    .cornerRadius(12)
                 }
             }
             .padding()

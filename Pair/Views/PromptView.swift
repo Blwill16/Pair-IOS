@@ -2,6 +2,8 @@ import SwiftUI
 
 struct PromptView: View {
     let seedTrack: SpotifyTrack
+    var initialPrompt: String? = nil
+    var initialMode: PairingMode? = nil
     
     @EnvironmentObject var authManager: AuthManager
     @EnvironmentObject var audioPlayer: AudioPlayer
@@ -12,8 +14,10 @@ struct PromptView: View {
     @State private var pairResponse: PairResponse?
     @State private var showResults = false
     @State private var errorMessage: String?
+    @State private var animateButton = false
     
     private let apiService = APIService.shared
+    private let hapticFeedback = UIImpactFeedbackGenerator(style: .medium)
     
     var body: some View {
         ScrollView {
@@ -44,6 +48,18 @@ struct PromptView: View {
                     promptText: promptText,
                     mode: selectedMode
                 )
+                .transition(.asymmetric(
+                    insertion: .move(edge: .trailing).combined(with: .opacity),
+                    removal: .move(edge: .leading).combined(with: .opacity)
+                ))
+            }
+        }
+        .onAppear {
+            if let prompt = initialPrompt {
+                promptText = prompt
+            }
+            if let mode = initialMode {
+                selectedMode = mode
             }
         }
     }
@@ -160,6 +176,13 @@ struct PromptView: View {
     
     private var generateButton: some View {
         Button {
+            hapticFeedback.impactOccurred()
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
+                animateButton = true
+            }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                animateButton = false
+            }
             generatePairing()
         } label: {
             HStack {
@@ -176,6 +199,7 @@ struct PromptView: View {
             .background(Color.purple)
             .foregroundColor(.white)
             .cornerRadius(12)
+            .scaleEffect(animateButton ? 0.95 : 1.0)
         }
         .disabled(isGenerating)
         .padding(.top)

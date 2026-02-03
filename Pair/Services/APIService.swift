@@ -81,6 +81,25 @@ class APIService: ObservableObject {
         return playlistsResponse.playlists
     }
     
+    func getUserPlaylists(userId: String, limit: Int = 20, offset: Int = 0) async throws -> [Playlist] {
+        guard let url = URL(string: "\(baseURL)/api/playlists?type=user&userId=\(userId)&limit=\(limit)&offset=\(offset)") else {
+            throw APIError.invalidURL
+        }
+        
+        let (data, response) = try await URLSession.shared.data(from: url)
+        
+        guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
+            throw APIError.requestFailed
+        }
+        
+        struct PlaylistsResponse: Codable {
+            let playlists: [Playlist]
+        }
+        
+        let playlistsResponse = try JSONDecoder().decode(PlaylistsResponse.self, from: data)
+        return playlistsResponse.playlists
+    }
+    
     func getFeed(userId: String, limit: Int = 20, offset: Int = 0) async throws -> [Playlist] {
         guard let url = URL(string: "\(baseURL)/api/feed?userId=\(userId)&limit=\(limit)&offset=\(offset)") else {
             throw APIError.invalidURL

@@ -1,19 +1,29 @@
 import SwiftUI
 
 struct ExploreView: View {
-    @State private var playlists: [Playlist] = []
+    @EnvironmentObject var authManager: AuthManager
+    
+    @State private var publicPlaylists: [Playlist] = []
+    @State private var myPlaylists: [Playlist] = []
     @State private var isLoading = false
     @State private var errorMessage: String?
     @State private var selectedPlaylist: Playlist?
     
     private let apiService = APIService.shared
     
+    private var allPlaylists: [Playlist] {
+        let combined = myPlaylists + publicPlaylists.filter { pub in
+            !myPlaylists.contains { $0.id == pub.id }
+        }
+        return combined
+    }
+    
     var body: some View {
         NavigationStack {
             Group {
-                if isLoading && playlists.isEmpty {
+                if isLoading && allPlaylists.isEmpty {
                     loadingView
-                } else if playlists.isEmpty {
+                } else if allPlaylists.isEmpty {
                     emptyStateView
                 } else {
                     playlistsList
@@ -72,17 +82,36 @@ struct ExploreView: View {
     
     private var playlistsList: some View {
         List {
-            Section {
-                ForEach(playlists) { playlist in
-                    PlaylistRowView(playlist: playlist)
-                        .contentShape(Rectangle())
-                        .onTapGesture {
-                            selectedPlaylist = playlist
-                        }
+            if !myPlaylists.isEmpty {
+                Section {
+                    ForEach(myPlaylists) { playlist in
+                        PlaylistRowView(playlist: playlist)
+                            .contentShape(Rectangle())
+                            .onTapGesture {
+                                selectedPlaylist = playlist
+                            }
+                    }
+                } header: {
+                    Text("Your Playlists")
+                        .textCase(nil)
                 }
-            } header: {
-                Text("Public Playlists")
-                    .textCase(nil)
+            }
+            
+            if !publicPlaylists.isEmpty {
+                Section {
+                    ForEach(publicPlaylists.filter { pub in
+                        !myPlaylists.contains { $0.id == pub.id }
+                    }) { playlist in
+                        PlaylistRowView(playlist: playlist)
+                            .contentShape(Rectangle())
+                            .onTapGesture {
+                                selectedPlaylist = playlist
+                            }
+                    }
+                } header: {
+                    Text("Discover")
+                        .textCase(nil)
+                }
             }
         }
         .listStyle(.plain)
@@ -93,9 +122,18 @@ struct ExploreView: View {
         errorMessage = nil
         
         do {
-            let fetchedPlaylists = try await apiService.getPublicPlaylists()
+            async let publicFetch = apiService.getPublicPlaylists()
+            
+            var userPlaylists: [Playlist] = []
+            if let userId = authManager.userId {
+                userPlaylists = try await apiService.getUserPlaylists(userId: userId)
+            }
+            
+            let fetchedPublic = try await publicFetch
+            
             await MainActor.run {
-                playlists = fetchedPlaylists
+                publicPlaylists = fetchedPublic
+                myPlaylists = userPlaylists
                 isLoading = false
             }
         } catch {

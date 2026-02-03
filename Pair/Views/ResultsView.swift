@@ -23,27 +23,43 @@ struct ResultsView: View {
             headerSection
             
             resultsList
+            
+            if authManager.isAuthenticated {
+                savePlaylistButton
+            }
         }
         .navigationTitle("Results")
         .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
-                if authManager.isAuthenticated {
-                    Button {
-                        showSavePlaylistSheet = true
-                    } label: {
-                        Image(systemName: "square.and.arrow.up")
-                    }
-                }
-            }
-        }
         .sheet(isPresented: $showSavePlaylistSheet) {
             savePlaylistSheet
         }
         .alert("Playlist Saved", isPresented: $showPlaylistSaved) {
             Button("OK", role: .cancel) {}
         } message: {
-            Text("Your playlist has been saved successfully")
+            Text("Your playlist has been saved and published!")
+        }
+    }
+    
+    private var savePlaylistButton: some View {
+        VStack(spacing: 0) {
+            Divider()
+            Button {
+                showSavePlaylistSheet = true
+            } label: {
+                HStack {
+                    Image(systemName: "square.and.arrow.up")
+                    Text("Save & Share Playlist")
+                        .fontWeight(.semibold)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 16)
+                .background(Color.purple)
+                .foregroundColor(.white)
+                .cornerRadius(12)
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+            .background(Color(.systemBackground))
         }
     }
     
@@ -220,7 +236,7 @@ struct ResultsView: View {
         
         Task {
             do {
-                _ = try await apiService.createPlaylist(
+                let playlist = try await apiService.createPlaylist(
                     userId: userId,
                     title: playlistTitle.isEmpty ? nil : playlistTitle,
                     promptText: promptText.isEmpty ? nil : promptText,
@@ -230,6 +246,8 @@ struct ResultsView: View {
                     mode: mode.rawValue,
                     results: pairResponse.results
                 )
+                
+                try await apiService.publishPlaylist(id: playlist.id, userId: userId)
                 
                 await MainActor.run {
                     isSavingPlaylist = false
@@ -259,6 +277,7 @@ struct ResultRowView: View {
     let onOpenSpotify: () -> Void
     
     @EnvironmentObject var audioPlayer: AudioPlayer
+    private let hapticFeedback = UIImpactFeedbackGenerator(style: .light)
     
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -300,6 +319,7 @@ struct ResultRowView: View {
                 HStack(spacing: 8) {
                     if let previewUrl = result.previewUrl {
                         Button {
+                            hapticFeedback.impactOccurred()
                             audioPlayer.play(url: previewUrl, trackId: result.trackId)
                         } label: {
                             Image(systemName: audioPlayer.currentTrackId == result.trackId && audioPlayer.isPlaying ? "pause.circle.fill" : "play.circle.fill")

@@ -4,12 +4,14 @@ import SwiftUI
 struct PairApp: App {
     @StateObject private var authManager = AuthManager.shared
     @StateObject private var audioPlayer = AudioPlayer.shared
+    @StateObject private var remixManager = RemixManager.shared
     
     var body: some Scene {
         WindowGroup {
             ContentView()
                 .environmentObject(authManager)
                 .environmentObject(audioPlayer)
+                .environmentObject(remixManager)
                 .onOpenURL { url in
                     handleIncomingURL(url)
                 }
