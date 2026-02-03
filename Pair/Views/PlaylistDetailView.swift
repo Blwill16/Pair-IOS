@@ -2,6 +2,8 @@ import SwiftUI
 
 struct PlaylistDetailView: View {
     let playlistId: String
+    var playlistName: String? = nil
+    var tracks: [PairTrack]? = nil
     
     @EnvironmentObject var authManager: AuthManager
     @EnvironmentObject var audioPlayer: AudioPlayer
@@ -19,47 +21,48 @@ struct PlaylistDetailView: View {
     private let apiService = APIService.shared
     
     var body: some View {
-        Group {
-            if isLoading && playlist == nil {
-                loadingView
-            } else if let playlist = playlist {
-                playlistContent(playlist)
-            } else {
-                errorView
-            }
-        }
-        .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
-                Menu {
-                    if authManager.isAuthenticated {
-                        Button {
-                            toggleLike()
-                        } label: {
-                            Label(isLiked ? "Unlike" : "Like", systemImage: isLiked ? "heart.fill" : "heart")
+        ZStack {
+            Color.pairBackground.ignoresSafeArea()
+            
+            VStack(spacing: 0) {
+                // Header with back button
+                HStack {
+                    Button {
+                        dismiss()
+                    } label: {
+                        HStack(spacing: 4) {
+                            Image(systemName: "arrow.left")
+                                .font(.system(size: 14))
+                            Text("Back")
+                                .font(.subheadline)
                         }
-                        
-                        Button {
-                            showRemixSheet = true
-                        } label: {
-                            Label("Remix Prompt", systemImage: "arrow.triangle.2.circlepath")
-                        }
+                        .foregroundColor(.pairTextPrimary)
                     }
                     
-                    if let playlist = playlist {
-                        Button {
-                            sharePlaylist(playlist)
-                        } label: {
-                            Label("Share", systemImage: "square.and.arrow.up")
-                        }
-                    }
-                } label: {
-                    Image(systemName: "ellipsis.circle")
+                    Spacer()
+                }
+                .padding(.horizontal, 24)
+                .padding(.top, 16)
+                .padding(.bottom, 24)
+                
+                // Content
+                if let localTracks = tracks {
+                    localPlaylistContent(name: playlistName ?? "Your Pairing", tracks: localTracks)
+                } else if isLoading && playlist == nil {
+                    loadingView
+                } else if let playlist = playlist {
+                    playlistContent(playlist)
+                } else {
+                    errorView
                 }
             }
         }
+        .navigationTitle("")
+        .navigationBarHidden(true)
         .task {
-            await loadPlaylist()
+            if tracks == nil {
+                await loadPlaylist()
+            }
         }
         .sheet(isPresented: $showRemixSheet) {
             if let playlist = playlist {
@@ -112,6 +115,80 @@ struct PlaylistDetailView: View {
                 
                 tracksList(playlist)
             }
+        }
+    }
+    
+    private func localPlaylistContent(name: String, tracks: [PairTrack]) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            // Title section
+            VStack(alignment: .leading, spacing: 8) {
+                Text(name)
+                    .font(.system(size: 28, weight: .bold))
+                    .foregroundColor(.pairTextPrimary)
+                
+                Text("Your curated pairing")
+                    .font(.body)
+                    .foregroundColor(.pairTextSecondary)
+                
+                let totalDuration = tracks.reduce(0) { $0 + ($1.duration_ms ?? 0) }
+                let minutes = totalDuration / 60000
+                Text("\(tracks.count) tracks \u{00B7} \(minutes) min")
+                    .font(.subheadline)
+                    .foregroundColor(.pairTextSecondary)
+            }
+            .padding(.horizontal, 24)
+            .padding(.bottom, 32)
+            
+            // Track list
+            ScrollView {
+                LazyVStack(spacing: 0) {
+                    ForEach(tracks, id: \.apple_music_id) { track in
+                        LocalTrackRow(track: track)
+                    }
+                }
+                .padding(.horizontal, 24)
+            }
+            
+            Spacer()
+            
+            // Bottom buttons
+            VStack(spacing: 12) {
+                Button {
+                    showRemixSheet = true
+                } label: {
+                    HStack {
+                        Image(systemName: "arrow.triangle.2.circlepath")
+                        Text("Remix this Pairing")
+                    }
+                    .font(.body)
+                    .fontWeight(.medium)
+                    .foregroundColor(.pairTextPrimary)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 16)
+                    .background(
+                        RoundedRectangle(cornerRadius: 30)
+                            .stroke(Color.pairTextSecondary.opacity(0.3), lineWidth: 1)
+                    )
+                }
+                
+                Button {
+                    // Save to Apple Music
+                } label: {
+                    HStack {
+                        Image(systemName: "square.and.arrow.up")
+                        Text("Save to Apple Music")
+                    }
+                    .font(.body)
+                    .fontWeight(.medium)
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 16)
+                    .background(Color.pairPurple)
+                    .cornerRadius(30)
+                }
+            }
+            .padding(.horizontal, 24)
+            .padding(.bottom, 32)
         }
     }
     
@@ -367,6 +444,93 @@ struct PlaylistTrackRow: View {
                     }
                     .buttonStyle(.plain)
                 }
+            }
+        }
+        .padding(.vertical, 12)
+    }
+}
+
+// MARK: - Local Track Row (for PairTrack)
+struct LocalTrackRow: View {
+    let track: PairTrack
+    
+    @EnvironmentObject var audioPlayer: AudioPlayer
+    private let hapticFeedback = UIImpactFeedbackGenerator(style: .light)
+    
+    private func formatDuration(_ ms: Int?) -> String {
+        guard let ms = ms else { return "" }
+        let seconds = ms / 1000
+        let minutes = seconds / 60
+        let remainingSeconds = seconds % 60
+        return "\(minutes):\(String(format: "%02d", remainingSeconds))"
+    }
+    
+    var body: some View {
+        HStack(spacing: 12) {
+            // Album art with play button overlay
+            ZStack {
+                if let artUrl = track.album_art_url, let url = URL(string: artUrl) {
+                    AsyncImage(url: url) { image in
+                        image
+                            .resizable()
+                            .aspectRatio(contentMode: .fill)
+                    } placeholder: {
+                        Rectangle()
+                            .fill(Color.gray.opacity(0.2))
+                    }
+                    .frame(width: 48, height: 48)
+                    .cornerRadius(6)
+                } else {
+                    Rectangle()
+                        .fill(Color.gray.opacity(0.2))
+                        .frame(width: 48, height: 48)
+                        .cornerRadius(6)
+                }
+                
+                // Play button overlay (only if no preview playing)
+                if let previewUrl = track.preview_url {
+                    let isPlaying = audioPlayer.currentTrackId == track.apple_music_id && audioPlayer.isPlaying
+                    if !isPlaying {
+                        Button {
+                            hapticFeedback.impactOccurred()
+                            audioPlayer.play(url: previewUrl, trackId: track.apple_music_id)
+                        } label: {
+                            Image(systemName: "play.fill")
+                                .font(.system(size: 14))
+                                .foregroundColor(.white)
+                        }
+                    }
+                }
+            }
+            
+            // Track info
+            VStack(alignment: .leading, spacing: 2) {
+                Text(track.track_name)
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+                    .foregroundColor(.pairTextPrimary)
+                    .lineLimit(1)
+                
+                Text(track.artist_name)
+                    .font(.caption)
+                    .foregroundColor(.pairTextSecondary)
+                    .lineLimit(1)
+            }
+            
+            Spacer()
+            
+            // Duration
+            Text(formatDuration(track.duration_ms))
+                .font(.subheadline)
+                .foregroundColor(.pairTextSecondary)
+            
+            // More options button
+            Button {
+                // Show options menu
+            } label: {
+                Image(systemName: "ellipsis")
+                    .font(.system(size: 16))
+                    .foregroundColor(.pairTextSecondary)
             }
         }
         .padding(.vertical, 12)

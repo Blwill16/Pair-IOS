@@ -339,6 +339,61 @@ class APIService: ObservableObject {
             throw APIError.requestFailed
         }
     }
+    
+    // MARK: - Search Tracking
+    
+    func logSearch(query: String, userId: String?) async {
+        guard let url = URL(string: "\(baseURL)/api/searches") else { return }
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        var body: [String: Any] = ["search_query": query]
+        if let userId = userId {
+            body["user_id"] = userId
+        }
+        
+        request.httpBody = try? JSONSerialization.data(withJSONObject: body)
+        
+        // Fire and forget - don't wait for response
+        _ = try? await URLSession.shared.data(for: request)
+    }
+    
+    func getRecentPairings(userId: String) async throws -> [RecentPairingData] {
+        guard let url = URL(string: "\(baseURL)/api/searches?type=recent&user_id=\(userId)") else {
+            throw APIError.invalidURL
+        }
+        
+        let (data, response) = try await URLSession.shared.data(from: url)
+        
+        guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
+            throw APIError.requestFailed
+        }
+        
+        struct RecentPairingsResponse: Codable {
+            let pairings: [RecentPairingData]
+        }
+        
+        let pairingsResponse = try JSONDecoder().decode(RecentPairingsResponse.self, from: data)
+        return pairingsResponse.pairings
+    }
+}
+
+// MARK: - Recent Pairing Data Model
+struct RecentPairingData: Codable, Identifiable {
+    let id: String
+    let seedName: String
+    let seedArtist: String
+    let mode: String
+    let date: String
+    let trackCount: Int
+    
+    var formattedDate: Date? {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return formatter.date(from: date)
+    }
 }
 
 enum APIError: Error, LocalizedError {

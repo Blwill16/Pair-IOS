@@ -226,7 +226,7 @@ struct ResultsView: View {
     
     // MARK: - Empty State
     private var emptyStateView: some View {
-        VStack(spacing: 20) {
+        VStack(spacing: 24) {
             Image(systemName: "checkmark.circle.fill")
                 .font(.system(size: 64))
                 .foregroundColor(.pairPurple)
@@ -241,22 +241,68 @@ struct ResultsView: View {
                 .foregroundColor(.pairTextSecondary)
             
             if !likedTracks.isEmpty {
-                Button {
-                    showSavePlaylistSheet = true
-                } label: {
-                    Text("Save as Playlist")
-                        .font(.body)
+                // Playlist naming input
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Name your playlist")
+                        .font(.subheadline)
                         .fontWeight(.medium)
-                        .foregroundColor(Color(hex: "1a1230"))
-                        .padding(.horizontal, 32)
-                        .padding(.vertical, 16)
+                        .foregroundColor(.pairTextPrimary)
+                    
+                    TextField("", text: $playlistTitle, prompt: Text("e.g., Late Night Drive")
+                        .foregroundColor(.pairTextTertiary))
+                        .foregroundColor(.pairTextPrimary)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 14)
                         .background(
-                            Capsule()
-                                .fill(Color.pairPurple)
+                            RoundedRectangle(cornerRadius: 12)
+                                .fill(Color.pairCardBackground)
                         )
-                        .shadow(color: Color.pairPurple.opacity(0.25), radius: 16, y: 4)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12)
+                                .stroke(Color.pairCardBorder, lineWidth: 1)
+                        )
                 }
+                .padding(.horizontal, 24)
                 .padding(.top, 8)
+                
+                // Save button
+                Button {
+                    savePlaylist()
+                } label: {
+                    if isSavingPlaylist {
+                        ProgressView()
+                            .tint(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 16)
+                            .background(
+                                Capsule()
+                                    .fill(Color.pairPurple.opacity(0.7))
+                            )
+                    } else {
+                        Text("Save Playlist")
+                            .font(.body)
+                            .fontWeight(.medium)
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 16)
+                            .background(
+                                Capsule()
+                                    .fill(Color.pairPurple)
+                            )
+                            .shadow(color: Color.pairPurple.opacity(0.25), radius: 16, y: 4)
+                    }
+                }
+                .disabled(isSavingPlaylist || playlistTitle.isEmpty)
+                .opacity(playlistTitle.isEmpty ? 0.6 : 1)
+                .padding(.horizontal, 24)
+                .padding(.top, 8)
+                
+                if let error = errorMessage {
+                    Text(error)
+                        .font(.caption)
+                        .foregroundColor(.red)
+                        .padding(.top, 4)
+                }
             }
         }
         .opacity(showEmptyState ? 1 : 0)

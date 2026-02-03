@@ -5,136 +5,113 @@ struct SettingsView: View {
     @EnvironmentObject var navigationState: NavigationState
     @Environment(\.dismiss) private var dismiss
     
-    @State private var notificationsEnabled = true
-    @State private var autoPlayPreviews = true
-    @State private var showExplicitContent = true
-    
     var body: some View {
         ZStack {
             Color.pairBackground.ignoresSafeArea()
             
             ScrollView {
-                VStack(spacing: 0) {
+                VStack(alignment: .leading, spacing: 0) {
                     // Header with back button
-                    HStack {
-                        Button {
-                            dismiss()
-                        } label: {
-                            HStack(spacing: 4) {
-                                Image(systemName: "chevron.left")
-                                    .font(.system(size: 14))
-                                Text("Back")
-                                    .font(.subheadline)
-                            }
-                            .foregroundColor(.pairTextSecondary)
+                    Button {
+                        dismiss()
+                    } label: {
+                        HStack(spacing: 4) {
+                            Image(systemName: "arrow.left")
+                                .font(.system(size: 14))
+                            Text("Back")
+                                .font(.subheadline)
                         }
-                        
-                        Spacer()
+                        .foregroundColor(.pairTextPrimary)
                     }
                     .padding(.horizontal, 24)
                     .padding(.top, 16)
                     .padding(.bottom, 24)
                     
                     // Title
-                    Text("Settings")
-                        .font(.system(size: 32, weight: .bold))
-                        .foregroundColor(.pairTextPrimary)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(.horizontal, 24)
-                        .padding(.bottom, 32)
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Settings")
+                            .font(.system(size: 32, weight: .bold))
+                            .foregroundColor(.pairTextPrimary)
+                        
+                        Text("Preferences and account")
+                            .font(.body)
+                            .foregroundColor(.pairTextSecondary)
+                    }
+                    .padding(.horizontal, 24)
+                    .padding(.bottom, 40)
                     
                     // Account Section
-                    SettingsSection(title: "ACCOUNT") {
-                        SettingsNavigationItem(
-                            title: "Edit Profile",
-                            icon: "person"
-                        ) {
+                    SettingsSectionHeader(title: "Account")
+                        .padding(.horizontal, 24)
+                        .padding(.bottom, 16)
+                    
+                    VStack(alignment: .leading, spacing: 0) {
+                        SettingsTextItem(title: "Edit Profile") {
                             // Navigate to edit profile
                         }
                         
-                        SettingsNavigationItem(
-                            title: "Connected Accounts",
-                            icon: "link"
-                        ) {
-                            // Navigate to connected accounts
-                        }
-                        
-                        SettingsNavigationItem(
-                            title: "Privacy",
-                            icon: "lock"
-                        ) {
+                        SettingsTextItem(title: "Privacy") {
                             // Navigate to privacy settings
                         }
+                        
+                        SettingsTextItem(title: "Notifications") {
+                            // Navigate to notifications
+                        }
                     }
+                    .padding(.horizontal, 24)
+                    .padding(.bottom, 40)
                     
                     // Preferences Section
-                    SettingsSection(title: "PREFERENCES") {
-                        SettingsToggleItem(
-                            title: "Notifications",
-                            description: "Get notified about new pairings",
-                            isOn: $notificationsEnabled
-                        )
+                    SettingsSectionHeader(title: "Preferences")
+                        .padding(.horizontal, 24)
+                        .padding(.bottom, 16)
+                    
+                    VStack(alignment: .leading, spacing: 0) {
+                        SettingsTextItem(title: "Music Quality") {
+                            // Navigate to music quality
+                        }
                         
-                        SettingsToggleItem(
-                            title: "Auto-play Previews",
-                            description: "Play song previews automatically",
-                            isOn: $autoPlayPreviews
-                        )
-                        
-                        SettingsToggleItem(
-                            title: "Explicit Content",
-                            description: "Show explicit songs in results",
-                            isOn: $showExplicitContent
-                        )
+                        SettingsTextItem(title: "Playback") {
+                            // Navigate to playback settings
+                        }
                     }
+                    .padding(.horizontal, 24)
+                    .padding(.bottom, 40)
                     
                     // About Section
-                    SettingsSection(title: "ABOUT") {
-                        SettingsNavigationItem(
-                            title: "Help & Support",
-                            icon: "questionmark.circle"
-                        ) {
+                    SettingsSectionHeader(title: "About")
+                        .padding(.horizontal, 24)
+                        .padding(.bottom, 16)
+                    
+                    VStack(alignment: .leading, spacing: 0) {
+                        SettingsTextItem(title: "Help & Support") {
                             // Navigate to help
                         }
                         
-                        SettingsNavigationItem(
-                            title: "Terms of Service",
-                            icon: "doc.text"
-                        ) {
+                        SettingsTextItem(title: "Terms & Privacy Policy") {
                             // Navigate to terms
                         }
                         
-                        SettingsNavigationItem(
-                            title: "Privacy Policy",
-                            icon: "shield"
-                        ) {
-                            // Navigate to privacy policy
+                        SettingsTextItem(title: "About Pair") {
+                            // Navigate to about
                         }
-                        
-                        SettingsValueItem(
-                            title: "Version",
-                            value: "1.0.0"
-                        )
                     }
+                    .padding(.horizontal, 24)
+                    .padding(.bottom, 40)
                     
                     // Sign Out Button
                     Button {
                         authManager.signOut()
+                        dismiss()
                     } label: {
                         Text("Sign Out")
                             .font(.body)
-                            .fontWeight(.medium)
-                            .foregroundColor(.red)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 16)
-                            .background(
-                                RoundedRectangle(cornerRadius: 12)
-                                    .stroke(Color.red.opacity(0.3), lineWidth: 1)
-                            )
+                            .foregroundColor(.pairTextPrimary)
                     }
                     .padding(.horizontal, 24)
-                    .padding(.top, 32)
-                    .padding(.bottom, 40)
+                    .padding(.bottom, 60)
+                    
+                    Spacer(minLength: 40)
                 }
             }
         }
@@ -142,6 +119,32 @@ struct SettingsView: View {
         .navigationBarHidden(true)
         .onAppear {
             navigationState.hideNavBar()
+        }
+    }
+}
+
+// MARK: - Settings Section Header (bold title)
+struct SettingsSectionHeader: View {
+    let title: String
+    
+    var body: some View {
+        Text(title)
+            .font(.system(size: 22, weight: .bold))
+            .foregroundColor(.pairTextPrimary)
+    }
+}
+
+// MARK: - Settings Text Item (simple text link)
+struct SettingsTextItem: View {
+    let title: String
+    let action: () -> Void
+    
+    var body: some View {
+        Button(action: action) {
+            Text(title)
+                .font(.body)
+                .foregroundColor(.pairTextSecondary)
+                .padding(.vertical, 12)
         }
     }
 }
