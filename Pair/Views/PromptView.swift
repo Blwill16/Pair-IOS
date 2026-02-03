@@ -11,22 +11,29 @@ struct MoodColorHelper {
     
     // Get mood color based on track name/artist
     static func getMoodColor(for track: SpotifyTrack) -> Color {
-        let name = track.trackName.lowercased()
-        let artist = track.artistName.lowercased()
+        return getMoodColor(for: track.trackName, artist: track.artistName)
+    }
+    
+    // Get mood color based on string name/artist (for mock data)
+    static func getMoodColor(for name: String, artist: String) -> Color {
+        let nameLower = name.lowercased()
+        let artistLower = artist.lowercased()
         
         // Map specific songs to their mood colors
-        if name.contains("midnight") || artist.contains("m83") {
+        if nameLower.contains("midnight") || artistLower.contains("m83") {
             return warmPink
-        } else if name.contains("holocene") || artist.contains("bon iver") {
+        } else if nameLower.contains("holocene") || nameLower.contains("skinny") || artistLower.contains("bon iver") {
             return coolBlue
-        } else if name.contains("intro") || artist.contains("xx") {
+        } else if nameLower.contains("intro") || artistLower.contains("xx") {
             return moodyPurple
-        } else if name.contains("teardrop") || artist.contains("massive attack") {
+        } else if nameLower.contains("teardrop") || nameLower.contains("breathe") || artistLower.contains("massive attack") || artistLower.contains("telepop") {
             return darkTeal
+        } else if nameLower.contains("nightcall") || artistLower.contains("kavinsky") {
+            return warmPink
         }
         
         // Default: use a hash of the track name to pick a consistent color
-        let hash = abs(track.trackName.hashValue)
+        let hash = abs(name.hashValue)
         let colors = [warmPink, coolBlue, moodyPurple, darkTeal]
         return colors[hash % colors.count]
     }
@@ -49,6 +56,7 @@ struct PromptView: View {
     @State private var showResults = false
     @State private var errorMessage: String?
     @State private var animateButton = false
+    @State private var artworkGlowIntensity: CGFloat = 0.15
     
     private let apiService = APIService.shared
     private let hapticFeedback = UIImpactFeedbackGenerator(style: .medium)
@@ -79,7 +87,7 @@ struct PromptView: View {
                     .padding(.top, 20)
                     .padding(.bottom, 24)
                     
-                    // Album art - large and centered
+                    // Album art - large and centered with breathing glow
                     AsyncImage(url: URL(string: seedTrack.albumArtUrl ?? "")) { image in
                         image
                             .resizable()
@@ -95,7 +103,21 @@ struct PromptView: View {
                     }
                     .frame(width: 200, height: 200)
                     .cornerRadius(16)
+                    .shadow(color: moodColor.opacity(artworkGlowIntensity), radius: 24, x: 0, y: 12)
+                    .shadow(color: moodColor.opacity(artworkGlowIntensity * 0.5), radius: 40, x: 0, y: 20)
                     .padding(.bottom, 20)
+                    .onChange(of: promptText) { _, newValue in
+                        // Trigger breathing animation when vibe input is filled
+                        if !newValue.isEmpty {
+                            withAnimation(.easeInOut(duration: 3).repeatForever(autoreverses: true)) {
+                                artworkGlowIntensity = 0.25
+                            }
+                        } else {
+                            withAnimation(.easeOut(duration: 0.3)) {
+                                artworkGlowIntensity = 0.15
+                            }
+                        }
+                    }
                     
                     // Song title and artist - centered
                     VStack(spacing: 4) {
