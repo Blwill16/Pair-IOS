@@ -29,7 +29,11 @@ class NavigationState: ObservableObject {
     @Published var isNavBarEnabled: Bool = true // Whether nav bar should show at all (false for full-screen experiences)
     
     private var lastScrollOffset: CGFloat = 0
-    private let scrollThreshold: CGFloat = 5 // Minimum scroll distance before triggering
+    private var scrollStartOffset: CGFloat = 0 // Track where scroll gesture started
+    private var isScrolling: Bool = false
+    private let scrollThreshold: CGFloat = 15 // Minimum scroll distance before triggering (increased for better UX)
+    private let topEdgeThreshold: CGFloat = 100 // Show nav bar when near top
+    private let bottomEdgeThreshold: CGFloat = 100 // Show nav bar when near bottom
     
     // Manually hide nav bar (for full-screen experiences like create pairing, results, settings)
     func hideNavBar() {
@@ -51,54 +55,75 @@ class NavigationState: ObservableObject {
     func handleScroll(offset: CGFloat, contentHeight: CGFloat, viewHeight: CGFloat) {
         guard isNavBarEnabled else { return }
         
-        let delta = offset - lastScrollOffset
+        // Track scroll start position
+        if !isScrolling {
+            scrollStartOffset = offset
+            isScrolling = true
+        }
         
-        // Always show nav bar near top or bottom
-        if offset < 50 {
+        // Calculate delta from scroll start (not last position) for more reliable detection
+        let totalDelta = offset - scrollStartOffset
+        let instantDelta = offset - lastScrollOffset
+        
+        // Always show nav bar near top
+        if offset < topEdgeThreshold {
             if !isNavBarVisible {
                 withAnimation(.easeInOut(duration: 0.3)) {
                     isNavBarVisible = true
                 }
             }
             lastScrollOffset = offset
+            scrollStartOffset = offset
             return
         }
         
         // Near bottom - always show
-        let maxScroll = contentHeight - viewHeight
-        if offset >= maxScroll - 50 {
+        let maxScroll = max(0, contentHeight - viewHeight)
+        if maxScroll > 0 && offset >= maxScroll - bottomEdgeThreshold {
             if !isNavBarVisible {
                 withAnimation(.easeInOut(duration: 0.3)) {
                     isNavBarVisible = true
                 }
             }
             lastScrollOffset = offset
+            scrollStartOffset = offset
             return
         }
         
-        // Check scroll direction with threshold
-        if delta > scrollThreshold {
-            // Scrolling down - hide nav
+        // Check scroll direction with threshold based on total movement
+        if totalDelta > scrollThreshold {
+            // Scrolling down significantly - hide nav
             if isNavBarVisible {
                 withAnimation(.easeInOut(duration: 0.3)) {
                     isNavBarVisible = false
                 }
             }
-        } else if delta < -scrollThreshold {
-            // Scrolling up - show nav
+            // Reset scroll start for next gesture
+            scrollStartOffset = offset
+        } else if totalDelta < -scrollThreshold {
+            // Scrolling up significantly - show nav
             if !isNavBarVisible {
                 withAnimation(.easeInOut(duration: 0.3)) {
                     isNavBarVisible = true
                 }
             }
+            // Reset scroll start for next gesture
+            scrollStartOffset = offset
+        }
+        
+        // Reset scroll tracking if direction changes
+        if (instantDelta > 0 && totalDelta < 0) || (instantDelta < 0 && totalDelta > 0) {
+            scrollStartOffset = offset
         }
         
         lastScrollOffset = offset
     }
     
-    // Reset scroll tracking (call when switching tabs)
+    // Reset scroll tracking (call when switching tabs or appearing)
     func resetScrollTracking() {
         lastScrollOffset = 0
+        scrollStartOffset = 0
+        isScrolling = false
         if isNavBarEnabled && !isNavBarVisible {
             withAnimation(.easeInOut(duration: 0.3)) {
                 isNavBarVisible = true
@@ -110,7 +135,7 @@ class NavigationState: ObservableObject {
 struct ContentView: View {
     @EnvironmentObject var authManager: AuthManager
     @StateObject private var navigationState = NavigationState()
-    @State private var selectedTab = 0
+    @State private var selectedTab = 1
     
     var body: some View {
         if !authManager.isAuthenticated {

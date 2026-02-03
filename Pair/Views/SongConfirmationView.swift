@@ -4,6 +4,7 @@ import SwiftUI
 struct SongConfirmationView: View {
     let track: SpotifyTrack
     @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject var navigationState: NavigationState
     @State private var showContent = false
     @State private var navigateToPrompt = false
     
@@ -131,10 +132,14 @@ struct SongConfirmationView: View {
                 Spacer()
             }
         }
-        .navigationBarHidden(true)
-        .onAppear {
-            showContent = true
-        }
+                .navigationBarHidden(true)
+                .onAppear {
+                    showContent = true
+                    navigationState.hideNavBar()
+                }
+                .onDisappear {
+                    navigationState.showNavBar()
+                }
         .navigationDestination(isPresented: $navigateToPrompt) {
             PromptView(seedTrack: track)
         }
