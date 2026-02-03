@@ -5,40 +5,27 @@ struct ContentView: View {
     @State private var selectedTab = 0
     
     var body: some View {
-        TabView(selection: $selectedTab) {
-            SearchView()
-                .tabItem {
-                    Label("Search", systemImage: "magnifyingglass")
+        if !authManager.isAuthenticated {
+            AuthView()
+        } else {
+            ZStack(alignment: .bottom) {
+                TabView(selection: $selectedTab) {
+                    SearchView()
+                        .tag(0)
+                    
+                    ExploreView()
+                        .tag(1)
+                    
+                    ProfileView(userId: authManager.userId)
+                        .tag(2)
                 }
-                .tag(0)
-            
-            ExploreView()
-                .tabItem {
-                    Label("Explore", systemImage: "globe")
-                }
-                .tag(1)
-            
-            if authManager.isAuthenticated {
-                FeedView()
-                    .tabItem {
-                        Label("Feed", systemImage: "house")
-                    }
-                    .tag(2)
+                .tabViewStyle(.page(indexDisplayMode: .never))
                 
-                ProfileView(userId: authManager.userId)
-                    .tabItem {
-                        Label("Profile", systemImage: "person")
-                    }
-                    .tag(3)
-            } else {
-                AuthView()
-                    .tabItem {
-                        Label("Sign In", systemImage: "person")
-                    }
-                    .tag(2)
+                FloatingNavBar(selectedTab: $selectedTab)
+                    .padding(.bottom, 20)
             }
+            .ignoresSafeArea(.keyboard)
         }
-        .tint(.purple)
     }
 }
 
@@ -49,93 +36,138 @@ struct AuthView: View {
     @State private var errorMessage: String?
     
     var body: some View {
-        NavigationStack {
-            VStack(spacing: 32) {
+        ZStack {
+            AnimatedGradientBackground()
+            
+            VStack(spacing: 0) {
                 Spacer()
                 
+                // Logo and tagline
                 VStack(spacing: 16) {
-                    Image(systemName: "waveform.circle.fill")
-                        .font(.system(size: 80))
-                        .foregroundStyle(.purple)
+                    PairLogo(size: 80)
+                        .breathingAnimation(duration: 4, scale: 1.03)
                     
                     Text("Pair")
-                        .font(.largeTitle)
-                        .fontWeight(.bold)
+                        .font(.system(size: 42, weight: .bold))
+                        .foregroundColor(.white)
                     
-                    Text("Discover music that matches your vibe")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
+                    VStack(spacing: 4) {
+                        Text("Music finds you here.")
+                            .font(.subheadline)
+                            .foregroundColor(.pairTextSecondary)
+                        Text("Start with a song, discover what's next.")
+                            .font(.subheadline)
+                            .foregroundColor(.pairTextSecondary)
+                    }
                 }
+                .padding(.bottom, 48)
                 
-                Spacer()
-                
-                VStack(spacing: 16) {
-                    SignInWithAppleButton()
-                        .frame(height: 50)
-                        .cornerRadius(12)
+                // Login card
+                VStack(spacing: 20) {
+                    // Spotify button
+                    Button {
+                        // Spotify login would go here
+                        authManager.continueAsGuest()
+                    } label: {
+                        HStack(spacing: 12) {
+                            Image(systemName: "music.note")
+                                .font(.system(size: 18))
+                            Text("Continue with Spotify")
+                                .font(.headline)
+                        }
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 16)
+                        .background(
+                            RoundedRectangle(cornerRadius: 12)
+                                .fill(Color.white.opacity(0.15))
+                        )
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12)
+                                .stroke(Color.white.opacity(0.2), lineWidth: 1)
+                        )
+                    }
                     
-                    HStack {
+                    // Divider
+                    HStack(spacing: 16) {
                         Rectangle()
-                            .fill(Color.secondary.opacity(0.3))
+                            .fill(Color.white.opacity(0.2))
                             .frame(height: 1)
                         Text("or")
                             .font(.caption)
-                            .foregroundStyle(.secondary)
+                            .foregroundColor(.pairTextTertiary)
                         Rectangle()
-                            .fill(Color.secondary.opacity(0.3))
+                            .fill(Color.white.opacity(0.2))
                             .frame(height: 1)
                     }
                     
-                    VStack(spacing: 12) {
-                        TextField("Email", text: $email)
-                            .textFieldStyle(.roundedBorder)
-                            .textContentType(.emailAddress)
-                            .keyboardType(.emailAddress)
-                            .autocapitalization(.none)
-                        
-                        Button {
-                            Task {
-                                do {
-                                    try await authManager.signInWithMagicLink(email: email)
-                                    showMagicLinkSent = true
-                                } catch {
-                                    errorMessage = error.localizedDescription
-                                }
-                            }
-                        } label: {
-                            Text("Send Magic Link")
-                                .frame(maxWidth: .infinity)
-                                .padding()
-                                .background(Color.purple)
-                                .foregroundColor(.white)
-                                .cornerRadius(12)
-                        }
-                        .disabled(email.isEmpty)
-                    }
+                    // Email input
+                    TextField("Email", text: $email)
+                        .textFieldStyle(GlassTextFieldStyle())
+                        .textContentType(.emailAddress)
+                        .keyboardType(.emailAddress)
+                        .autocapitalization(.none)
                     
+                    // Magic link button
+                    Button {
+                        Task {
+                            do {
+                                try await authManager.signInWithMagicLink(email: email)
+                                showMagicLinkSent = true
+                            } catch {
+                                errorMessage = error.localizedDescription
+                            }
+                        }
+                    } label: {
+                        Text("Send Magic Link")
+                            .font(.headline)
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 16)
+                            .background(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .fill(email.isEmpty ? Color.pairPurple.opacity(0.5) : Color.pairPurple)
+                            )
+                    }
+                    .disabled(email.isEmpty)
+                    
+                    // Continue as guest
                     Button {
                         authManager.continueAsGuest()
                     } label: {
-                        Text("Continue as Guest")
-                            .foregroundStyle(.secondary)
+                        Text("Continue as guest")
+                            .font(.subheadline)
+                            .foregroundColor(.pairTextSecondary)
                     }
+                    .padding(.top, 8)
                 }
-                .padding(.horizontal)
+                .padding(.horizontal, 24)
+                .padding(.vertical, 32)
+                .glassCard()
+                .padding(.horizontal, 24)
                 
                 if let error = errorMessage {
                     Text(error)
                         .font(.caption)
-                        .foregroundStyle(.red)
+                        .foregroundColor(.red)
+                        .padding(.top, 12)
                 }
                 
                 Spacer()
+                
+                // Footer
+                Text("By continuing, you agree to our use of music discovery magic")
+                    .font(.caption2)
+                    .foregroundColor(.pairTextTertiary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 32)
+                    .padding(.bottom, 32)
             }
-            .padding()
-            .alert("Check your email", isPresented: $showMagicLinkSent) {
-                Button("OK", role: .cancel) {}
-            } message: {
-                Text("We sent a magic link to \(email)")
-            }
+        }
+        .alert("Check your email", isPresented: $showMagicLinkSent) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text("We sent a magic link to \(email)")
         }
     }
 }

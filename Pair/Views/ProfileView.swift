@@ -21,38 +21,21 @@ struct ProfileView: View {
     
     var body: some View {
         NavigationStack {
-            Group {
-                if isLoading && profile == nil {
-                    loadingView
-                } else if let profile = profile {
-                    profileContent(profile)
-                } else {
-                    errorView
-                }
-            }
-            .navigationTitle(isOwnProfile ? "Profile" : "")
-            .navigationBarTitleDisplayMode(isOwnProfile ? .large : .inline)
-            .toolbar {
-                if isOwnProfile {
-                    ToolbarItem(placement: .topBarTrailing) {
-                        Menu {
-                            Button {
-                                showEditProfile = true
-                            } label: {
-                                Label("Edit Profile", systemImage: "pencil")
-                            }
-                            
-                            Button(role: .destructive) {
-                                authManager.signOut()
-                            } label: {
-                                Label("Sign Out", systemImage: "rectangle.portrait.and.arrow.right")
-                            }
-                        } label: {
-                            Image(systemName: "gearshape")
-                        }
+            ZStack {
+                Color.pairBackground.ignoresSafeArea()
+                
+                Group {
+                    if isLoading && profile == nil {
+                        loadingView
+                    } else if let profile = profile {
+                        profileContent(profile)
+                    } else {
+                        errorView
                     }
                 }
             }
+            .navigationTitle("")
+            .navigationBarHidden(true)
             .task {
                 await loadProfile()
             }
@@ -74,6 +57,7 @@ struct ProfileView: View {
         VStack {
             Spacer()
             ProgressView()
+                .tint(.pairPurple)
             Spacer()
         }
     }
@@ -84,17 +68,18 @@ struct ProfileView: View {
             
             Image(systemName: "person.crop.circle.badge.exclamationmark")
                 .font(.system(size: 64))
-                .foregroundStyle(.secondary)
+                .foregroundColor(.pairTextSecondary)
             
             VStack(spacing: 8) {
                 Text("Profile not found")
                     .font(.title2)
                     .fontWeight(.semibold)
+                    .foregroundColor(.white)
                 
                 if let error = errorMessage {
                     Text(error)
                         .font(.caption)
-                        .foregroundStyle(.red)
+                        .foregroundColor(.red)
                 }
             }
             
@@ -105,6 +90,37 @@ struct ProfileView: View {
     private func profileContent(_ profile: Profile) -> some View {
         ScrollView {
             VStack(spacing: 24) {
+                // Header with settings
+                HStack {
+                    Text("Profile")
+                        .font(.system(size: 28, weight: .bold))
+                        .foregroundColor(.white)
+                    
+                    Spacer()
+                    
+                    if isOwnProfile {
+                        Menu {
+                            Button {
+                                showEditProfile = true
+                            } label: {
+                                Label("Edit Profile", systemImage: "pencil")
+                            }
+                            
+                            Button(role: .destructive) {
+                                authManager.signOut()
+                            } label: {
+                                Label("Sign Out", systemImage: "rectangle.portrait.and.arrow.right")
+                            }
+                        } label: {
+                            Image(systemName: "gearshape")
+                                .font(.system(size: 20))
+                                .foregroundColor(.pairTextSecondary)
+                        }
+                    }
+                }
+                .padding(.horizontal, 16)
+                .padding(.top, 60)
+                
                 profileHeader(profile)
                 
                 statsSection(profile)
@@ -115,7 +131,7 @@ struct ProfileView: View {
                 
                 playlistsSection(profile)
             }
-            .padding()
+            .padding(.bottom, 100)
         }
     }
     
@@ -127,68 +143,77 @@ struct ProfileView: View {
                     .aspectRatio(contentMode: .fill)
             } placeholder: {
                 Circle()
-                    .fill(Color.gray.opacity(0.3))
+                    .fill(Color.pairPurple.opacity(0.2))
                     .overlay {
                         Image(systemName: "person.fill")
                             .font(.system(size: 40))
-                            .foregroundStyle(.gray)
+                            .foregroundColor(.pairPurple)
                     }
             }
             .frame(width: 100, height: 100)
             .clipShape(Circle())
             
-            VStack(spacing: 4) {
+            VStack(spacing: 6) {
                 Text(profile.displayName ?? profile.username)
                     .font(.title2)
                     .fontWeight(.bold)
+                    .foregroundColor(.white)
                 
                 Text("@\(profile.username)")
                     .font(.subheadline)
-                    .foregroundStyle(.secondary)
+                    .foregroundColor(.pairTextSecondary)
                 
                 if let bio = profile.bio, !bio.isEmpty {
                     Text(bio)
                         .font(.subheadline)
-                        .foregroundStyle(.secondary)
+                        .foregroundColor(.pairTextSecondary)
                         .multilineTextAlignment(.center)
                         .padding(.top, 4)
                 }
             }
         }
+        .padding(.horizontal, 16)
     }
     
     private func statsSection(_ profile: Profile) -> some View {
-        HStack(spacing: 48) {
+        HStack(spacing: 0) {
             VStack(spacing: 4) {
                 Text("\(profile.playlists?.count ?? 0)")
                     .font(.title3)
                     .fontWeight(.bold)
+                    .foregroundColor(.white)
                 Text("Playlists")
                     .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundColor(.pairTextSecondary)
             }
+            .frame(maxWidth: .infinity)
             
             VStack(spacing: 4) {
                 Text("\(profile.followerCount ?? 0)")
                     .font(.title3)
                     .fontWeight(.bold)
+                    .foregroundColor(.white)
                 Text("Followers")
                     .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundColor(.pairTextSecondary)
             }
+            .frame(maxWidth: .infinity)
             
             VStack(spacing: 4) {
                 Text("\(profile.followingCount ?? 0)")
                     .font(.title3)
                     .fontWeight(.bold)
+                    .foregroundColor(.white)
                 Text("Following")
                     .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundColor(.pairTextSecondary)
             }
+            .frame(maxWidth: .infinity)
         }
-        .padding()
-        .background(Color(.systemGray6))
-        .cornerRadius(12)
+        .padding(.vertical, 20)
+        .background(Color.white.opacity(0.05))
+        .cornerRadius(16)
+        .padding(.horizontal, 16)
     }
     
     private var followButton: some View {
@@ -196,24 +221,28 @@ struct ProfileView: View {
             toggleFollow()
         } label: {
             Text(isFollowing ? "Following" : "Follow")
-                .fontWeight(.medium)
+                .fontWeight(.semibold)
                 .frame(maxWidth: .infinity)
-                .padding()
-                .background(isFollowing ? Color(.systemGray5) : Color.purple)
-                .foregroundColor(isFollowing ? .primary : .white)
+                .padding(.vertical, 14)
+                .background(isFollowing ? Color.white.opacity(0.1) : Color.pairPurple)
+                .foregroundColor(.white)
                 .cornerRadius(12)
         }
+        .padding(.horizontal, 16)
     }
     
     private func playlistsSection(_ profile: Profile) -> some View {
         VStack(alignment: .leading, spacing: 16) {
             Text("Playlists")
-                .font(.headline)
+                .font(.subheadline)
+                .fontWeight(.medium)
+                .foregroundColor(.pairTextSecondary)
+                .padding(.horizontal, 16)
             
             if let playlists = profile.playlists, !playlists.isEmpty {
-                LazyVStack(spacing: 12) {
+                LazyVStack(spacing: 0) {
                     ForEach(playlists) { playlist in
-                        PlaylistRowView(playlist: playlist)
+                        ProfilePlaylistRow(playlist: playlist)
                             .contentShape(Rectangle())
                             .onTapGesture {
                                 selectedPlaylist = playlist
@@ -224,11 +253,11 @@ struct ProfileView: View {
                 VStack(spacing: 12) {
                     Image(systemName: "music.note.list")
                         .font(.system(size: 32))
-                        .foregroundStyle(.secondary)
+                        .foregroundColor(.pairTextTertiary)
                     
                     Text("No playlists yet")
                         .font(.subheadline)
-                        .foregroundStyle(.secondary)
+                        .foregroundColor(.pairTextSecondary)
                 }
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 32)
@@ -390,6 +419,46 @@ struct EditProfileSheet: View {
                 }
             }
         }
+    }
+}
+
+// MARK: - Profile Playlist Row
+struct ProfilePlaylistRow: View {
+    let playlist: Playlist
+    
+    var body: some View {
+        HStack(spacing: 14) {
+            RoundedRectangle(cornerRadius: 8)
+                .fill(Color.pairPurple.opacity(0.2))
+                .frame(width: 56, height: 56)
+                .overlay {
+                    Image(systemName: "music.note.list")
+                        .foregroundColor(.pairPurple)
+                }
+            
+            VStack(alignment: .leading, spacing: 4) {
+                Text(playlist.title)
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+                    .foregroundColor(.white)
+                    .lineLimit(1)
+                
+                if let seedTrackName = playlist.seedTrackName {
+                    Text("Seed: \(seedTrackName)")
+                        .font(.caption)
+                        .foregroundColor(.pairTextSecondary)
+                        .lineLimit(1)
+                }
+            }
+            
+            Spacer()
+            
+            Image(systemName: "chevron.right")
+                .font(.system(size: 14))
+                .foregroundColor(.pairTextTertiary)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
     }
 }
 

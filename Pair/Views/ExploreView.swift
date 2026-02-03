@@ -20,16 +20,21 @@ struct ExploreView: View {
     
     var body: some View {
         NavigationStack {
-            Group {
-                if isLoading && allPlaylists.isEmpty {
-                    loadingView
-                } else if allPlaylists.isEmpty {
-                    emptyStateView
-                } else {
-                    playlistsList
+            ZStack {
+                Color.pairBackground.ignoresSafeArea()
+                
+                Group {
+                    if isLoading && allPlaylists.isEmpty {
+                        loadingView
+                    } else if allPlaylists.isEmpty {
+                        emptyStateView
+                    } else {
+                        playlistsList
+                    }
                 }
             }
-            .navigationTitle("Explore")
+            .navigationTitle("")
+            .navigationBarHidden(true)
             .refreshable {
                 await loadPlaylists()
             }
@@ -46,6 +51,7 @@ struct ExploreView: View {
         VStack {
             Spacer()
             ProgressView()
+                .tint(.pairPurple)
             Spacer()
         }
     }
@@ -54,18 +60,33 @@ struct ExploreView: View {
         VStack(spacing: 24) {
             Spacer()
             
-            Image(systemName: "globe")
-                .font(.system(size: 64))
-                .foregroundStyle(.purple.opacity(0.6))
+            ZStack {
+                Circle()
+                    .fill(
+                        RadialGradient(
+                            colors: [Color.pairPurple.opacity(0.15), Color.clear],
+                            center: .center,
+                            startRadius: 0,
+                            endRadius: 100
+                        )
+                    )
+                    .frame(width: 200, height: 200)
+                    .blur(radius: 30)
+                
+                Image(systemName: "globe")
+                    .font(.system(size: 64))
+                    .foregroundColor(.pairPurple.opacity(0.6))
+            }
             
             VStack(spacing: 8) {
                 Text("No playlists yet")
                     .font(.title2)
                     .fontWeight(.semibold)
+                    .foregroundColor(.white)
                 
                 Text("Be the first to create and share a playlist!")
                     .font(.subheadline)
-                    .foregroundStyle(.secondary)
+                    .foregroundColor(.pairTextSecondary)
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, 32)
             }
@@ -73,7 +94,7 @@ struct ExploreView: View {
             if let error = errorMessage {
                 Text(error)
                     .font(.caption)
-                    .foregroundStyle(.red)
+                    .foregroundColor(.red)
             }
             
             Spacer()
@@ -81,40 +102,60 @@ struct ExploreView: View {
     }
     
     private var playlistsList: some View {
-        List {
-            if !myPlaylists.isEmpty {
-                Section {
-                    ForEach(myPlaylists) { playlist in
-                        PlaylistRowView(playlist: playlist)
-                            .contentShape(Rectangle())
-                            .onTapGesture {
-                                selectedPlaylist = playlist
+        ScrollView {
+            VStack(spacing: 24) {
+                // Header
+                Text("Explore")
+                    .font(.system(size: 28, weight: .bold))
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, 16)
+                    .padding(.top, 60)
+                
+                if !myPlaylists.isEmpty {
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("Your Playlists")
+                            .font(.subheadline)
+                            .fontWeight(.medium)
+                            .foregroundColor(.pairTextSecondary)
+                            .padding(.horizontal, 16)
+                        
+                        LazyVStack(spacing: 0) {
+                            ForEach(myPlaylists) { playlist in
+                                ExplorePlaylistRow(playlist: playlist)
+                                    .contentShape(Rectangle())
+                                    .onTapGesture {
+                                        selectedPlaylist = playlist
+                                    }
                             }
+                        }
                     }
-                } header: {
-                    Text("Your Playlists")
-                        .textCase(nil)
+                }
+                
+                if !publicPlaylists.isEmpty {
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("Discover")
+                            .font(.subheadline)
+                            .fontWeight(.medium)
+                            .foregroundColor(.pairTextSecondary)
+                            .padding(.horizontal, 16)
+                        
+                        LazyVStack(spacing: 0) {
+                            ForEach(publicPlaylists.filter { pub in
+                                !myPlaylists.contains { $0.id == pub.id }
+                            }) { playlist in
+                                ExplorePlaylistRow(playlist: playlist)
+                                    .contentShape(Rectangle())
+                                    .onTapGesture {
+                                        selectedPlaylist = playlist
+                                    }
+                            }
+                        }
+                    }
                 }
             }
-            
-            if !publicPlaylists.isEmpty {
-                Section {
-                    ForEach(publicPlaylists.filter { pub in
-                        !myPlaylists.contains { $0.id == pub.id }
-                    }) { playlist in
-                        PlaylistRowView(playlist: playlist)
-                            .contentShape(Rectangle())
-                            .onTapGesture {
-                                selectedPlaylist = playlist
-                            }
-                    }
-                } header: {
-                    Text("Discover")
-                        .textCase(nil)
-                }
-            }
+            .padding(.bottom, 100)
         }
-        .listStyle(.plain)
     }
     
     private func loadPlaylists() async {
@@ -142,6 +183,58 @@ struct ExploreView: View {
                 isLoading = false
             }
         }
+    }
+}
+
+// MARK: - Explore Playlist Row
+struct ExplorePlaylistRow: View {
+    let playlist: Playlist
+    
+    var body: some View {
+        HStack(spacing: 14) {
+            RoundedRectangle(cornerRadius: 8)
+                .fill(Color.pairPurple.opacity(0.2))
+                .frame(width: 56, height: 56)
+                .overlay {
+                    Image(systemName: "music.note.list")
+                        .foregroundColor(.pairPurple)
+                }
+            
+            VStack(alignment: .leading, spacing: 4) {
+                Text(playlist.title)
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+                    .foregroundColor(.white)
+                    .lineLimit(1)
+                
+                HStack(spacing: 8) {
+                    if let seedTrackName = playlist.seedTrackName {
+                        Text("Seed: \(seedTrackName)")
+                            .font(.caption)
+                            .foregroundColor(.pairTextSecondary)
+                            .lineLimit(1)
+                    }
+                    
+                    if let likeCount = playlist.likeCount, likeCount > 0 {
+                        HStack(spacing: 2) {
+                            Image(systemName: "heart.fill")
+                                .font(.system(size: 10))
+                            Text("\(likeCount)")
+                        }
+                        .font(.caption)
+                        .foregroundColor(.pairTextTertiary)
+                    }
+                }
+            }
+            
+            Spacer()
+            
+            Image(systemName: "chevron.right")
+                .font(.system(size: 14))
+                .foregroundColor(.pairTextTertiary)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
     }
 }
 

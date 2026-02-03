@@ -24,6 +24,7 @@
 		015 /* TrackRowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 115; };
 		016 /* PlaylistRowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 116; };
 		017 /* RemixManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 118; };
+		018 /* DesignSystem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 119; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -46,6 +47,7 @@
 		116 /* PlaylistRowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaylistRowView.swift; sourceTree = "<group>"; };
 		117 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		118 /* RemixManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemixManager.swift; sourceTree = "<group>"; };
+		119 /* DesignSystem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DesignSystem.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -68,20 +70,21 @@
 			sourceTree = "<group>";
 		};
 		301 /* Pair */ = {
-			isa = PBXGroup;
-			children = (
-				101 /* PairApp.swift */,
-				102 /* ContentView.swift */,
-				303 /* Models */,
-				304 /* Services */,
-				305 /* Views */,
-				306 /* Components */,
-				103 /* Assets.xcassets */,
-				117 /* Info.plist */,
-			);
-			path = Pair;
-			sourceTree = "<group>";
-		};
+				isa = PBXGroup;
+				children = (
+					101 /* PairApp.swift */,
+					102 /* ContentView.swift */,
+					119 /* DesignSystem.swift */,
+					303 /* Models */,
+					304 /* Services */,
+					305 /* Views */,
+					306 /* Components */,
+					103 /* Assets.xcassets */,
+					117 /* Info.plist */,
+				);
+				path = Pair;
+				sourceTree = "<group>";
+			};
 		302 /* Products */ = {
 			isa = PBXGroup;
 			children = (
@@ -220,7 +223,8 @@
 					014 /* AudioPlayer.swift in Sources */,
 					015 /* TrackRowView.swift in Sources */,
 					016 /* PlaylistRowView.swift in Sources */,
-					017 /* RemixManager.swift in Sources */,
+				017 /* RemixManager.swift in Sources */,
+				018 /* DesignSystem.swift in Sources */,
 				);
 				runOnlyForDeploymentPostprocessing = 0;
 			};

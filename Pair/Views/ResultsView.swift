@@ -19,17 +19,27 @@ struct ResultsView: View {
     private let apiService = APIService.shared
     
     var body: some View {
-        VStack(spacing: 0) {
-            headerSection
+        ZStack {
+            Color.pairBackground.ignoresSafeArea()
             
-            resultsList
-            
-            if authManager.isAuthenticated {
-                savePlaylistButton
+            VStack(spacing: 0) {
+                headerSection
+                
+                resultsList
+                
+                if authManager.isAuthenticated {
+                    savePlaylistButton
+                }
             }
         }
-        .navigationTitle("Results")
+        .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
+        .navigationBarBackButtonHidden(true)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarLeading) {
+                PairBackButton()
+            }
+        }
         .sheet(isPresented: $showSavePlaylistSheet) {
             savePlaylistSheet
         }
@@ -42,88 +52,98 @@ struct ResultsView: View {
     
     private var savePlaylistButton: some View {
         VStack(spacing: 0) {
-            Divider()
             Button {
                 showSavePlaylistSheet = true
             } label: {
-                HStack {
+                HStack(spacing: 10) {
                     Image(systemName: "square.and.arrow.up")
+                        .font(.system(size: 16))
                     Text("Save & Share Playlist")
                         .fontWeight(.semibold)
                 }
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 16)
-                .background(Color.purple)
+                .background(Color.pairPurple)
                 .foregroundColor(.white)
-                .cornerRadius(12)
+                .cornerRadius(14)
             }
             .padding(.horizontal, 16)
-            .padding(.vertical, 12)
-            .background(Color(.systemBackground))
+            .padding(.vertical, 16)
+            .background(
+                Color.pairBackground
+                    .shadow(color: Color.black.opacity(0.3), radius: 20, y: -10)
+            )
         }
     }
     
     private var headerSection: some View {
         VStack(spacing: 12) {
-            HStack(spacing: 12) {
+            HStack(spacing: 14) {
                 AsyncImage(url: URL(string: pairResponse.seed.albumArtUrl ?? "")) { image in
                     image
                         .resizable()
                         .aspectRatio(contentMode: .fill)
                 } placeholder: {
                     Rectangle()
-                        .fill(Color.gray.opacity(0.3))
+                        .fill(Color.white.opacity(0.1))
                 }
-                .frame(width: 60, height: 60)
-                .cornerRadius(8)
+                .frame(width: 64, height: 64)
+                .cornerRadius(10)
                 
-                VStack(alignment: .leading, spacing: 2) {
+                VStack(alignment: .leading, spacing: 4) {
                     Text("Fresh pairings for")
                         .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .foregroundColor(.pairTextSecondary)
                     Text(pairResponse.seed.trackName)
                         .font(.subheadline)
-                        .fontWeight(.medium)
+                        .fontWeight(.semibold)
+                        .foregroundColor(.white)
                         .lineLimit(1)
                     Text(pairResponse.seed.artistName)
                         .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .foregroundColor(.pairTextSecondary)
                 }
                 
                 Spacer()
                 
-                VStack(alignment: .trailing, spacing: 2) {
+                VStack(alignment: .trailing, spacing: 4) {
                     Text(mode.displayName)
                         .font(.caption)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
-                        .background(Color.purple.opacity(0.2))
-                        .foregroundStyle(.purple)
+                        .fontWeight(.medium)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 5)
+                        .background(Color.pairPurple.opacity(0.2))
+                        .foregroundColor(.pairPurple)
                         .cornerRadius(8)
                     
                     Text("\(pairResponse.results.count) tracks")
                         .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .foregroundColor(.pairTextTertiary)
                 }
             }
-            .padding()
-            .background(Color(.systemGray6))
+            .padding(16)
+            .background(Color.white.opacity(0.05))
+            .cornerRadius(16)
+            .padding(.horizontal, 16)
+            .padding(.top, 60)
         }
     }
     
     private var resultsList: some View {
-        List {
-            ForEach(Array(pairResponse.results.enumerated()), id: \.element.id) { index, result in
-                ResultRowView(
-                    result: result,
-                    rank: index + 1,
-                    isSaved: savedTrackIds.contains(result.trackId),
-                    onSave: { saveTrack(result) },
-                    onOpenSpotify: { openInSpotify(result.spotifyUrl) }
-                )
+        ScrollView {
+            LazyVStack(spacing: 0) {
+                ForEach(Array(pairResponse.results.enumerated()), id: \.element.id) { index, result in
+                    ResultRowView(
+                        result: result,
+                        rank: index + 1,
+                        isSaved: savedTrackIds.contains(result.trackId),
+                        onSave: { saveTrack(result) },
+                        onOpenSpotify: { openInSpotify(result.spotifyUrl) }
+                    )
+                }
             }
+            .padding(.top, 8)
         }
-        .listStyle(.plain)
     }
     
     private var savePlaylistSheet: some View {
@@ -285,7 +305,7 @@ struct ResultRowView: View {
                 Text("\(rank)")
                     .font(.caption)
                     .fontWeight(.medium)
-                    .foregroundStyle(.secondary)
+                    .foregroundColor(.pairTextTertiary)
                     .frame(width: 24)
                 
                 AsyncImage(url: URL(string: result.albumArtUrl ?? "")) { image in
@@ -294,24 +314,25 @@ struct ResultRowView: View {
                         .aspectRatio(contentMode: .fill)
                 } placeholder: {
                     Rectangle()
-                        .fill(Color.gray.opacity(0.3))
+                        .fill(Color.white.opacity(0.1))
                         .overlay {
                             Image(systemName: "music.note")
-                                .foregroundStyle(.gray)
+                                .foregroundColor(.pairTextTertiary)
                         }
                 }
-                .frame(width: 50, height: 50)
-                .cornerRadius(6)
+                .frame(width: 52, height: 52)
+                .cornerRadius(8)
                 
-                VStack(alignment: .leading, spacing: 2) {
+                VStack(alignment: .leading, spacing: 3) {
                     Text(result.trackName)
                         .font(.subheadline)
                         .fontWeight(.medium)
+                        .foregroundColor(.white)
                         .lineLimit(1)
                     
                     Text(result.artistName)
                         .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .foregroundColor(.pairTextSecondary)
                 }
                 
                 Spacer()
@@ -323,8 +344,8 @@ struct ResultRowView: View {
                             audioPlayer.play(url: previewUrl, trackId: result.trackId)
                         } label: {
                             Image(systemName: audioPlayer.currentTrackId == result.trackId && audioPlayer.isPlaying ? "pause.circle.fill" : "play.circle.fill")
-                                .font(.system(size: 32))
-                                .foregroundStyle(.purple)
+                                .font(.system(size: 36))
+                                .foregroundColor(.pairPurple)
                         }
                         .buttonStyle(.plain)
                     }
@@ -343,7 +364,7 @@ struct ResultRowView: View {
                         }
                     } label: {
                         Image(systemName: "ellipsis")
-                            .foregroundStyle(.secondary)
+                            .foregroundColor(.pairTextSecondary)
                             .padding(8)
                     }
                 }
@@ -352,11 +373,13 @@ struct ResultRowView: View {
             if let explanation = result.explanation {
                 Text(explanation)
                     .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundColor(.pairTextTertiary)
                     .padding(.leading, 36)
+                    .italic()
             }
         }
-        .padding(.vertical, 4)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 10)
     }
 }
 
