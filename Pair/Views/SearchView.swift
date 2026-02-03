@@ -1,25 +1,5 @@
 import SwiftUI
-
-// MARK: - Mock Data for Design
-struct MockSong: Identifiable {
-    let id = UUID()
-    let name: String
-    let artist: String
-    let imageUrl: String
-}
-
-let mockRecentPairings = [
-    MockSong(name: "Midnight City", artist: "M83", imageUrl: "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=200"),
-    MockSong(name: "Holocene", artist: "Bon Iver", imageUrl: "https://images.unsplash.com/photo-1459749411175-04bf5292ceea?w=200"),
-    MockSong(name: "Nightcall", artist: "Kavinsky", imageUrl: "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=200")
-]
-
-let mockTrendingSeeds = [
-    MockSong(name: "Intro", artist: "The xx", imageUrl: "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=200"),
-    MockSong(name: "Teardrop", artist: "Massive Attack", imageUrl: "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=200"),
-    MockSong(name: "Skinny Love", artist: "Bon Iver", imageUrl: "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=200"),
-    MockSong(name: "Breathe", artist: "Télépopmusik", imageUrl: "https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?w=200")
-]
+import Combine
 
 struct SearchView: View {
     @EnvironmentObject var navigationState: NavigationState
@@ -31,6 +11,7 @@ struct SearchView: View {
     @State private var showPromptView = false
     @State private var errorMessage: String?
     @State private var placeholderIndex = 0
+    @State private var searchTask: Task<Void, Never>?
     
     private let apiService = APIService.shared
     private let placeholders = ["Search a song", "Search an artist", "Type a feeling"]
@@ -56,11 +37,22 @@ struct SearchView: View {
                 performSearch()
             }
             .onChange(of: searchText) { _, newValue in
+                // Cancel any pending search
+                searchTask?.cancel()
+                
                 if newValue.isEmpty {
                     searchResults = []
-                } else if newValue.count >= 1 {
-                    // Live search as user types
-                    performSearch()
+                    isSearching = false
+                } else if newValue.count >= 2 {
+                    // Debounce search - wait 300ms after user stops typing
+                    searchTask = Task {
+                        try? await Task.sleep(nanoseconds: 300_000_000) // 300ms
+                        if !Task.isCancelled {
+                            await MainActor.run {
+                                performSearch()
+                            }
+                        }
+                    }
                 }
             }
             .navigationDestination(isPresented: $showPromptView) {
@@ -133,131 +125,40 @@ struct SearchView: View {
             // Quick select suggestions - show when user is typing
             if !searchResults.isEmpty && !searchText.isEmpty {
                 VStack(spacing: 0) {
-                    ForEach(searchResults.prefix(3)) { track in
+                    ForEach(searchResults.prefix(8)) { track in
                         QuickSelectRow(track: track)
                             .contentShape(Rectangle())
                             .onTapGesture {
                                 selectedTrack = track
                                 showPromptView = true
                             }
+                        
+                        if track.trackId != searchResults.prefix(8).last?.trackId {
+                            Divider()
+                                .padding(.leading, 76)
+                        }
                     }
                 }
                 .background(
                     RoundedRectangle(cornerRadius: 16)
                         .fill(Color.pairCardBackground)
                 )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16)
+                        .stroke(Color.black.opacity(0.08), lineWidth: 1)
+                )
                 .shadow(color: Color.black.opacity(0.06), radius: 12, y: 4)
                 .padding(.horizontal, 24)
-                .padding(.bottom, 40)
             }
             
-            // Your recent pairings section
-            VStack(alignment: .leading, spacing: 16) {
-                HStack(spacing: 8) {
-                    Image(systemName: "clock")
-                        .font(.system(size: 14))
-                        .foregroundColor(.pairTextSecondary)
-                    
-                    Text("Your recent pairings")
-                        .font(.headline)
-                        .foregroundColor(.pairTextPrimary)
-                }
-                .padding(.horizontal, 24)
-                
-                // Recent songs horizontal scroll
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 12) {
-                        ForEach(mockRecentPairings) { song in
-                            RecentSongCard(song: song) {
-                                let track = SpotifyTrack(
-                                    trackId: song.id.uuidString,
-                                    trackName: song.name,
-                                    artistName: song.artist,
-                                    albumArtUrl: song.imageUrl,
-                                    previewUrl: nil,
-                                    spotifyUrl: ""
-                                )
-                                selectedTrack = track
-                                showPromptView = true
-                            }
-                        }
-                    }
-                    .padding(.horizontal, 24)
-                }
+            // Loading indicator
+            if isSearching {
+                ProgressView()
+                    .tint(.pairPurple)
+                    .padding(.top, 40)
             }
-            .padding(.bottom, 32)
             
-            // Trending seeds section
-            VStack(alignment: .leading, spacing: 16) {
-                HStack(spacing: 8) {
-                    Image(systemName: "sparkles")
-                        .font(.system(size: 14))
-                        .foregroundColor(.pairTextSecondary)
-                    
-                    Text("Trending seeds")
-                        .font(.headline)
-                        .foregroundColor(.pairTextPrimary)
-                    
-                    Spacer()
-                    
-                    Text("rising now")
-                        .font(.caption)
-                        .foregroundColor(.pairTextTertiary)
-                }
-                .padding(.horizontal, 24)
-                
-                // Trending songs
-                VStack(spacing: 0) {
-                    ForEach(mockTrendingSeeds) { song in
-                        TrendingSongRow(song: song) {
-                            let track = SpotifyTrack(
-                                trackId: song.id.uuidString,
-                                trackName: song.name,
-                                artistName: song.artist,
-                                albumArtUrl: song.imageUrl,
-                                previewUrl: nil,
-                                spotifyUrl: ""
-                            )
-                            selectedTrack = track
-                            showPromptView = true
-                        }
-                    }
-                }
-                .padding(.horizontal, 24)
-            }
-            .padding(.bottom, 24)
-            
-            // Random inspiration button
-            Button {
-                if let randomSong = mockTrendingSeeds.randomElement() {
-                    let track = SpotifyTrack(
-                        trackId: randomSong.id.uuidString,
-                        trackName: randomSong.name,
-                        artistName: randomSong.artist,
-                        albumArtUrl: randomSong.imageUrl,
-                        previewUrl: nil,
-                        spotifyUrl: ""
-                    )
-                    selectedTrack = track
-                    showPromptView = true
-                }
-            } label: {
-                HStack(spacing: 8) {
-                    Image(systemName: "dice")
-                        .font(.system(size: 16))
-                    Text("Random inspiration")
-                        .font(.subheadline)
-                        .fontWeight(.medium)
-                }
-                .foregroundColor(.pairTextSecondary)
-                .padding(.horizontal, 20)
-                .padding(.vertical, 14)
-                .background(
-                    RoundedRectangle(cornerRadius: 12)
-                        .stroke(Color.pairCardBorder, lineWidth: 1)
-                )
-            }
-            .padding(.bottom, 120)
+            Spacer()
         }
         .onAppear {
             startPlaceholderCycling()
@@ -351,114 +252,6 @@ struct SearchView: View {
                     isSearching = false
                 }
             }
-        }
-    }
-}
-
-// MARK: - Recent Song Card (Figma: Song card with mood color overlay)
-struct RecentSongCard: View {
-    let song: MockSong
-    let action: () -> Void
-    @State private var isPressed = false
-    
-    // Get mood color based on song name
-    private var moodColor: Color {
-        MoodColorHelper.getMoodColor(for: song.name, artist: song.artist)
-    }
-    
-    var body: some View {
-        Button(action: action) {
-            VStack(alignment: .leading, spacing: 10) {
-                // Album art with subtle mood color overlay
-                ZStack(alignment: .bottomLeading) {
-                    AsyncImage(url: URL(string: song.imageUrl)) { image in
-                        image
-                            .resizable()
-                            .aspectRatio(contentMode: .fill)
-                    } placeholder: {
-                        Rectangle()
-                            .fill(Color.pairBackgroundSecondary)
-                            .overlay {
-                                Image(systemName: "music.note")
-                                    .font(.system(size: 24))
-                                    .foregroundColor(.pairTextTertiary)
-                            }
-                    }
-                    .frame(width: 140, height: 140)
-                    .cornerRadius(12)
-                    
-                    // Subtle mood color gradient overlay
-                    LinearGradient(
-                        colors: [Color.clear, moodColor.opacity(0.3)],
-                        startPoint: .top,
-                        endPoint: .bottom
-                    )
-                    .cornerRadius(12)
-                }
-                .shadow(color: moodColor.opacity(0.15), radius: 8, y: 4)
-                
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(song.name)
-                        .font(.subheadline)
-                        .fontWeight(.medium)
-                        .foregroundColor(.pairTextPrimary)
-                        .lineLimit(1)
-                    
-                    Text(song.artist)
-                        .font(.caption)
-                        .foregroundColor(.pairTextSecondary)
-                        .lineLimit(1)
-                }
-            }
-            .frame(width: 140)
-        }
-        .scaleEffect(isPressed ? 0.97 : 1.0)
-        .animation(.easeOut(duration: 0.15), value: isPressed)
-        .onLongPressGesture(minimumDuration: .infinity, pressing: { pressing in
-            isPressed = pressing
-        }, perform: {})
-    }
-}
-
-// MARK: - Trending Song Row
-struct TrendingSongRow: View {
-    let song: MockSong
-    let action: () -> Void
-    
-    var body: some View {
-        Button(action: action) {
-            HStack(spacing: 12) {
-                AsyncImage(url: URL(string: song.imageUrl)) { image in
-                    image
-                        .resizable()
-                        .aspectRatio(contentMode: .fill)
-                } placeholder: {
-                    Rectangle()
-                        .fill(Color.pairBackgroundSecondary)
-                        .overlay {
-                            Image(systemName: "music.note")
-                                .foregroundColor(.pairTextTertiary)
-                        }
-                }
-                .frame(width: 48, height: 48)
-                .cornerRadius(8)
-                
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(song.name)
-                        .font(.subheadline)
-                        .fontWeight(.medium)
-                        .foregroundColor(.pairTextPrimary)
-                        .lineLimit(1)
-                    
-                    Text(song.artist)
-                        .font(.caption)
-                        .foregroundColor(.pairTextSecondary)
-                        .lineLimit(1)
-                }
-                
-                Spacer()
-            }
-            .padding(.vertical, 8)
         }
     }
 }
