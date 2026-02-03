@@ -51,8 +51,6 @@ struct ProfileView: View {
     @State private var isFollowing = false
     @State private var selectedPlaylist: Playlist?
     @State private var showEditProfile = false
-    @State private var viewHeight: CGFloat = 0
-    @State private var contentHeight: CGFloat = 0
     
     private let apiService = APIService.shared
     
@@ -65,9 +63,17 @@ struct ProfileView: View {
             ZStack {
                 Color.pairBackground.ignoresSafeArea()
                 
-                GeometryReader { outerGeometry in
-                    ScrollView {
-                        VStack(spacing: 0) {
+                ScrollView {
+                    VStack(spacing: 0) {
+                        // Scroll tracking anchor at top
+                        GeometryReader { geo in
+                            Color.clear
+                                .preference(
+                                    key: ScrollOffsetPreferenceKey.self,
+                                    value: geo.frame(in: .global).minY
+                                )
+                        }
+                        .frame(height: 0)
                         // Header with back and settings
                         HStack {
                             Button {
@@ -230,25 +236,10 @@ struct ProfileView: View {
                             .padding(.horizontal, 24)
                         }
                         .padding(.bottom, 120)
-                        }
-                        .background(
-                            GeometryReader { contentGeometry in
-                                Color.clear
-                                    .preference(key: ScrollOffsetPreferenceKey.self, value: -contentGeometry.frame(in: .named("profileScroll")).origin.y)
-                                    .preference(key: ContentHeightPreferenceKey.self, value: contentGeometry.size.height)
-                            }
-                        )
                     }
-                    .coordinateSpace(name: "profileScroll")
-                    .onPreferenceChange(ScrollOffsetPreferenceKey.self) { offset in
-                        navigationState.handleScroll(offset: offset, contentHeight: contentHeight, viewHeight: viewHeight)
-                    }
-                    .onPreferenceChange(ContentHeightPreferenceKey.self) { height in
-                        contentHeight = height
-                    }
-                    .onAppear {
-                        viewHeight = outerGeometry.size.height
-                    }
+                }
+                .onPreferenceChange(ScrollOffsetPreferenceKey.self) { value in
+                    navigationState.handleScrollOffset(value)
                 }
                 
                 if isLoading && profile == nil {

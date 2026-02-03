@@ -28,12 +28,9 @@ class NavigationState: ObservableObject {
     @Published var isNavBarVisible: Bool = true
     @Published var isNavBarEnabled: Bool = true // Whether nav bar should show at all (false for full-screen experiences)
     
-    private var lastScrollOffset: CGFloat = 0
-    private var scrollStartOffset: CGFloat = 0 // Track where scroll gesture started
-    private var isScrolling: Bool = false
-    private let scrollThreshold: CGFloat = 15 // Minimum scroll distance before triggering (increased for better UX)
-    private let topEdgeThreshold: CGFloat = 100 // Show nav bar when near top
-    private let bottomEdgeThreshold: CGFloat = 100 // Show nav bar when near bottom
+    private var initialOffset: CGFloat? = nil // The Y position when scroll starts (at top)
+    private var lastOffset: CGFloat = 0
+    private let scrollThreshold: CGFloat = 20 // Minimum scroll distance before triggering
     
     // Manually hide nav bar (for full-screen experiences like create pairing, results, settings)
     func hideNavBar() {
@@ -51,79 +48,63 @@ class NavigationState: ObservableObject {
         }
     }
     
-    // Handle scroll-based auto-hide (for scrollable screens like Discover, Profile)
-    func handleScroll(offset: CGFloat, contentHeight: CGFloat, viewHeight: CGFloat) {
+    // Handle scroll using global Y position (simpler and more reliable)
+    // When scrolling down, minY decreases (content moves up)
+    // When scrolling up, minY increases (content moves down)
+    func handleScrollOffset(_ currentOffset: CGFloat) {
         guard isNavBarEnabled else { return }
         
-        // Track scroll start position
-        if !isScrolling {
-            scrollStartOffset = offset
-            isScrolling = true
+        // Initialize on first call
+        if initialOffset == nil {
+            initialOffset = currentOffset
+            lastOffset = currentOffset
+            return
         }
         
-        // Calculate delta from scroll start (not last position) for more reliable detection
-        let totalDelta = offset - scrollStartOffset
-        let instantDelta = offset - lastScrollOffset
+        let delta = currentOffset - lastOffset
+        let scrolledAmount = (initialOffset ?? currentOffset) - currentOffset
         
-        // Always show nav bar near top
-        if offset < topEdgeThreshold {
+        // Near top of scroll (within 50 points of initial position) - always show
+        if scrolledAmount < 50 {
             if !isNavBarVisible {
                 withAnimation(.easeInOut(duration: 0.3)) {
                     isNavBarVisible = true
                 }
             }
-            lastScrollOffset = offset
-            scrollStartOffset = offset
+            lastOffset = currentOffset
             return
         }
         
-        // Near bottom - always show
-        let maxScroll = max(0, contentHeight - viewHeight)
-        if maxScroll > 0 && offset >= maxScroll - bottomEdgeThreshold {
-            if !isNavBarVisible {
-                withAnimation(.easeInOut(duration: 0.3)) {
-                    isNavBarVisible = true
-                }
-            }
-            lastScrollOffset = offset
-            scrollStartOffset = offset
-            return
-        }
-        
-        // Check scroll direction with threshold based on total movement
-        if totalDelta > scrollThreshold {
-            // Scrolling down significantly - hide nav
+        // Scrolling down (delta is negative - content moving up)
+        if delta < -scrollThreshold {
             if isNavBarVisible {
                 withAnimation(.easeInOut(duration: 0.3)) {
                     isNavBarVisible = false
                 }
             }
-            // Reset scroll start for next gesture
-            scrollStartOffset = offset
-        } else if totalDelta < -scrollThreshold {
-            // Scrolling up significantly - show nav
+            lastOffset = currentOffset
+        }
+        // Scrolling up (delta is positive - content moving down)
+        else if delta > scrollThreshold {
             if !isNavBarVisible {
                 withAnimation(.easeInOut(duration: 0.3)) {
                     isNavBarVisible = true
                 }
             }
-            // Reset scroll start for next gesture
-            scrollStartOffset = offset
+            lastOffset = currentOffset
         }
-        
-        // Reset scroll tracking if direction changes
-        if (instantDelta > 0 && totalDelta < 0) || (instantDelta < 0 && totalDelta > 0) {
-            scrollStartOffset = offset
-        }
-        
-        lastScrollOffset = offset
+    }
+    
+    // Legacy method for backward compatibility
+    func handleScroll(offset: CGFloat, contentHeight: CGFloat, viewHeight: CGFloat) {
+        // Convert to the new format (invert since old method used positive offset for scroll down)
+        handleScrollOffset(-offset)
     }
     
     // Reset scroll tracking (call when switching tabs or appearing)
     func resetScrollTracking() {
-        lastScrollOffset = 0
-        scrollStartOffset = 0
-        isScrolling = false
+        initialOffset = nil
+        lastOffset = 0
         if isNavBarEnabled && !isNavBarVisible {
             withAnimation(.easeInOut(duration: 0.3)) {
                 isNavBarVisible = true
