@@ -1,8 +1,8 @@
 import SwiftUI
 
 // MARK: - Curated Playlist Data
-struct CuratedPlaylist: Identifiable {
-    let id = UUID()
+struct CuratedPlaylist: Identifiable, Codable {
+    let id: String
     let title: String
     let description: String
     let seedTrack: String
@@ -15,107 +15,21 @@ struct CuratedPlaylist: Identifiable {
     let tracks: [CuratedTrack]
 }
 
-struct CuratedTrack: Identifiable {
-    let id = UUID()
+struct CuratedTrack: Identifiable, Codable {
+    let id: String
     let name: String
     let artist: String
     let duration: String
     let artworkUrl: String
+    let previewUrl: String
 }
 
-// MARK: - Curated Playlists with Real Songs
-let curatedPlaylists = [
-    CuratedPlaylist(
-        title: "Late Night Drive",
-        description: "Empty highways, city lights fading. That feeling when you're driving nowhere in particular.",
-        seedTrack: "Nightcall",
-        seedArtist: "Kavinsky",
-        seedArtwork: "https://is1-ssl.mzstatic.com/image/thumb/Music125/v4/a3/a3/2a/a3a32a1c-8f8e-8e1e-8e1e-8e1e8e1e8e1e/source/400x400bb.jpg",
-        curatorName: "Alex Chen",
-        trackCount: 5,
-        genres: ["Electronic", "Indie"],
-        emotions: ["Nostalgic", "Dreamy"],
-        tracks: [
-            CuratedTrack(name: "Nightcall", artist: "Kavinsky", duration: "4:29", artworkUrl: "https://is1-ssl.mzstatic.com/image/thumb/Music125/v4/a3/a3/2a/a3a32a1c-8f8e-8e1e-8e1e-8e1e8e1e8e1e/source/100x100bb.jpg"),
-            CuratedTrack(name: "Midnight City", artist: "M83", duration: "4:04", artworkUrl: "https://is1-ssl.mzstatic.com/image/thumb/Music115/v4/b5/b5/b5/b5b5b5b5-8e1e-8e1e-8e1e-8e1e8e1e8e1e/source/100x100bb.jpg"),
-            CuratedTrack(name: "Under Cover of Darkness", artist: "The Strokes", duration: "3:59", artworkUrl: "https://is1-ssl.mzstatic.com/image/thumb/Music125/v4/c4/c4/c4/c4c4c4c4-8e1e-8e1e-8e1e-8e1e8e1e8e1e/source/100x100bb.jpg"),
-            CuratedTrack(name: "Hyperballad", artist: "Bjork", duration: "5:21", artworkUrl: "https://is1-ssl.mzstatic.com/image/thumb/Music125/v4/d5/d5/d5/d5d5d5d5-8e1e-8e1e-8e1e-8e1e8e1e8e1e/source/100x100bb.jpg"),
-            CuratedTrack(name: "Such Great Heights", artist: "The Postal Service", duration: "4:26", artworkUrl: "https://is1-ssl.mzstatic.com/image/thumb/Music125/v4/e6/e6/e6/e6e6e6e6-8e1e-8e1e-8e1e-8e1e8e1e8e1e/source/100x100bb.jpg")
-        ]
-    ),
-    CuratedPlaylist(
-        title: "Gentle Morning",
-        description: "Sunday morning light through curtains. Coffee brewing, world still quiet.",
-        seedTrack: "Holocene",
-        seedArtist: "Bon Iver",
-        seedArtwork: "https://is1-ssl.mzstatic.com/image/thumb/Music125/v4/f7/f7/f7/f7f7f7f7-8e1e-8e1e-8e1e-8e1e8e1e8e1e/source/400x400bb.jpg",
-        curatorName: "Maya Patel",
-        trackCount: 5,
-        genres: ["Folk", "Indie"],
-        emotions: ["Intimate", "Melancholic"],
-        tracks: [
-            CuratedTrack(name: "Holocene", artist: "Bon Iver", duration: "5:36", artworkUrl: "https://is1-ssl.mzstatic.com/image/thumb/Music125/v4/f7/f7/f7/f7f7f7f7-8e1e-8e1e-8e1e-8e1e8e1e8e1e/source/100x100bb.jpg"),
-            CuratedTrack(name: "Skinny Love", artist: "Bon Iver", duration: "3:58", artworkUrl: "https://is1-ssl.mzstatic.com/image/thumb/Music125/v4/f7/f7/f7/f7f7f7f7-8e1e-8e1e-8e1e-8e1e8e1e8e1e/source/100x100bb.jpg"),
-            CuratedTrack(name: "The Night We Met", artist: "Lord Huron", duration: "3:28", artworkUrl: "https://is1-ssl.mzstatic.com/image/thumb/Music125/v4/g8/g8/g8/g8g8g8g8-8e1e-8e1e-8e1e-8e1e8e1e8e1e/source/100x100bb.jpg"),
-            CuratedTrack(name: "First Day of My Life", artist: "Bright Eyes", duration: "3:06", artworkUrl: "https://is1-ssl.mzstatic.com/image/thumb/Music125/v4/h9/h9/h9/h9h9h9h9-8e1e-8e1e-8e1e-8e1e8e1e8e1e/source/100x100bb.jpg"),
-            CuratedTrack(name: "re: stacks", artist: "Bon Iver", duration: "6:41", artworkUrl: "https://is1-ssl.mzstatic.com/image/thumb/Music125/v4/f7/f7/f7/f7f7f7f7-8e1e-8e1e-8e1e-8e1e8e1e8e1e/source/100x100bb.jpg")
-        ]
-    ),
-    CuratedPlaylist(
-        title: "Velvet Grooves",
-        description: "Smooth R&B for late nights. Let the rhythm carry you somewhere warm.",
-        seedTrack: "Untitled (How Does It Feel)",
-        seedArtist: "D'Angelo",
-        seedArtwork: "https://is1-ssl.mzstatic.com/image/thumb/Music125/v4/i0/i0/i0/i0i0i0i0-8e1e-8e1e-8e1e-8e1e8e1e8e1e/source/400x400bb.jpg",
-        curatorName: "Marcus Reid",
-        trackCount: 5,
-        genres: ["R&B", "Soul"],
-        emotions: ["Intimate", "Dreamy"],
-        tracks: [
-            CuratedTrack(name: "Untitled (How Does It Feel)", artist: "D'Angelo", duration: "4:47", artworkUrl: "https://is1-ssl.mzstatic.com/image/thumb/Music125/v4/i0/i0/i0/i0i0i0i0-8e1e-8e1e-8e1e-8e1e8e1e8e1e/source/100x100bb.jpg"),
-            CuratedTrack(name: "Electric", artist: "Alina Baraz & Khalid", duration: "4:00", artworkUrl: "https://is1-ssl.mzstatic.com/image/thumb/Music125/v4/j1/j1/j1/j1j1j1j1-8e1e-8e1e-8e1e-8e1e8e1e8e1e/source/100x100bb.jpg"),
-            CuratedTrack(name: "Best Part", artist: "Daniel Caesar ft. H.E.R.", duration: "3:29", artworkUrl: "https://is1-ssl.mzstatic.com/image/thumb/Music125/v4/k2/k2/k2/k2k2k2k2-8e1e-8e1e-8e1e-8e1e8e1e8e1e/source/100x100bb.jpg"),
-            CuratedTrack(name: "Adorn", artist: "Miguel", duration: "3:13", artworkUrl: "https://is1-ssl.mzstatic.com/image/thumb/Music125/v4/l3/l3/l3/l3l3l3l3-8e1e-8e1e-8e1e-8e1e8e1e8e1e/source/100x100bb.jpg"),
-            CuratedTrack(name: "Prototype", artist: "OutKast", duration: "5:24", artworkUrl: "https://is1-ssl.mzstatic.com/image/thumb/Music125/v4/m4/m4/m4/m4m4m4m4-8e1e-8e1e-8e1e-8e1e8e1e8e1e/source/100x100bb.jpg")
-        ]
-    ),
-    CuratedPlaylist(
-        title: "Jazz After Dark",
-        description: "Smoky rooms and dim lights. The kind of jazz that makes time slow down.",
-        seedTrack: "Blue in Green",
-        seedArtist: "Miles Davis",
-        seedArtwork: "https://is1-ssl.mzstatic.com/image/thumb/Music125/v4/n5/n5/n5/n5n5n5n5-8e1e-8e1e-8e1e-8e1e8e1e8e1e/source/400x400bb.jpg",
-        curatorName: "Jordan Park",
-        trackCount: 5,
-        genres: ["Jazz"],
-        emotions: ["Melancholic", "Intimate"],
-        tracks: [
-            CuratedTrack(name: "Blue in Green", artist: "Miles Davis", duration: "5:37", artworkUrl: "https://is1-ssl.mzstatic.com/image/thumb/Music125/v4/n5/n5/n5/n5n5n5n5-8e1e-8e1e-8e1e-8e1e8e1e8e1e/source/100x100bb.jpg"),
-            CuratedTrack(name: "In a Sentimental Mood", artist: "Duke Ellington & John Coltrane", duration: "4:16", artworkUrl: "https://is1-ssl.mzstatic.com/image/thumb/Music125/v4/o6/o6/o6/o6o6o6o6-8e1e-8e1e-8e1e-8e1e8e1e8e1e/source/100x100bb.jpg"),
-            CuratedTrack(name: "My Favorite Things", artist: "John Coltrane", duration: "13:41", artworkUrl: "https://is1-ssl.mzstatic.com/image/thumb/Music125/v4/p7/p7/p7/p7p7p7p7-8e1e-8e1e-8e1e-8e1e8e1e8e1e/source/100x100bb.jpg"),
-            CuratedTrack(name: "Round Midnight", artist: "Thelonious Monk", duration: "5:54", artworkUrl: "https://is1-ssl.mzstatic.com/image/thumb/Music125/v4/q8/q8/q8/q8q8q8q8-8e1e-8e1e-8e1e-8e1e8e1e8e1e/source/100x100bb.jpg"),
-            CuratedTrack(name: "Naima", artist: "John Coltrane", duration: "4:24", artworkUrl: "https://is1-ssl.mzstatic.com/image/thumb/Music125/v4/r9/r9/r9/r9r9r9r9-8e1e-8e1e-8e1e-8e1e8e1e8e1e/source/100x100bb.jpg")
-        ]
-    ),
-    CuratedPlaylist(
-        title: "Indie Heartbreak",
-        description: "Songs for staring out windows. When feelings need a soundtrack.",
-        seedTrack: "Motion Picture Soundtrack",
-        seedArtist: "Radiohead",
-        seedArtwork: "https://is1-ssl.mzstatic.com/image/thumb/Music125/v4/s0/s0/s0/s0s0s0s0-8e1e-8e1e-8e1e-8e1e8e1e8e1e/source/400x400bb.jpg",
-        curatorName: "Emma Wilson",
-        trackCount: 5,
-        genres: ["Indie", "Rock"],
-        emotions: ["Melancholic", "Nostalgic"],
-        tracks: [
-            CuratedTrack(name: "Motion Picture Soundtrack", artist: "Radiohead", duration: "7:01", artworkUrl: "https://is1-ssl.mzstatic.com/image/thumb/Music125/v4/s0/s0/s0/s0s0s0s0-8e1e-8e1e-8e1e-8e1e8e1e8e1e/source/100x100bb.jpg"),
-            CuratedTrack(name: "The Funeral", artist: "Band of Horses", duration: "5:23", artworkUrl: "https://is1-ssl.mzstatic.com/image/thumb/Music125/v4/t1/t1/t1/t1t1t1t1-8e1e-8e1e-8e1e-8e1e8e1e8e1e/source/100x100bb.jpg"),
-            CuratedTrack(name: "Lua", artist: "Bright Eyes", duration: "4:05", artworkUrl: "https://is1-ssl.mzstatic.com/image/thumb/Music125/v4/u2/u2/u2/u2u2u2u2-8e1e-8e1e-8e1e-8e1e8e1e8e1e/source/100x100bb.jpg"),
-            CuratedTrack(name: "Fake Plastic Trees", artist: "Radiohead", duration: "4:50", artworkUrl: "https://is1-ssl.mzstatic.com/image/thumb/Music125/v4/v3/v3/v3/v3v3v3v3-8e1e-8e1e-8e1e-8e1e8e1e8e1e/source/100x100bb.jpg"),
-            CuratedTrack(name: "Between the Bars", artist: "Elliott Smith", duration: "2:21", artworkUrl: "https://is1-ssl.mzstatic.com/image/thumb/Music125/v4/w4/w4/w4/w4w4w4w4-8e1e-8e1e-8e1e-8e1e8e1e8e1e/source/100x100bb.jpg")
-        ]
-    )
-]
+struct DiscoverResponse: Codable {
+    let playlists: [CuratedPlaylist]
+}
+
+// MARK: - Fallback Playlists (used while API loads)
+let fallbackPlaylists: [CuratedPlaylist] = []
 
 // MARK: - Genre/Emotion Colors
 let genreColors: [String: (Color, Color)] = [
@@ -146,16 +60,21 @@ struct ExploreView: View {
     @State private var selectedEmotions: Set<String> = []
     @State private var showFilters = false
     @State private var selectedPlaylist: CuratedPlaylist?
+    @State private var playlists: [CuratedPlaylist] = []
+    @State private var isLoading = false
     
+    private let apiService = APIService.shared
     private let genres = ["Indie", "Electronic", "R&B", "Jazz", "Rock", "Hip-Hop", "Folk", "Soul"]
     private let emotions = ["Melancholic", "Energetic", "Dreamy", "Intimate", "Experimental", "Nostalgic"]
     
     private var filteredPlaylists: [CuratedPlaylist] {
+        let source = playlists.isEmpty ? fallbackPlaylists : playlists
+        
         if selectedGenres.isEmpty && selectedEmotions.isEmpty {
-            return curatedPlaylists
+            return source
         }
         
-        return curatedPlaylists.filter { playlist in
+        return source.filter { playlist in
             let matchesGenre = selectedGenres.isEmpty || !Set(playlist.genres).isDisjoint(with: selectedGenres)
             let matchesEmotion = selectedEmotions.isEmpty || !Set(playlist.emotions).isDisjoint(with: selectedEmotions)
             return matchesGenre && matchesEmotion
@@ -297,6 +216,27 @@ struct ExploreView: View {
             navigationState.showNavBar()
             navigationState.resetScrollState()
         }
+        .task {
+            await loadPlaylists()
+        }
+    }
+    
+    private func loadPlaylists() async {
+        guard playlists.isEmpty else { return }
+        isLoading = true
+        
+        do {
+            let response: DiscoverResponse = try await apiService.fetchDiscoverPlaylists()
+            await MainActor.run {
+                playlists = response.playlists
+                isLoading = false
+            }
+        } catch {
+            print("Error loading playlists: \(error)")
+            await MainActor.run {
+                isLoading = false
+            }
+        }
     }
 }
 
@@ -346,18 +286,49 @@ struct DiscoverHeroCard: View {
         VStack(alignment: .leading, spacing: 0) {
             // Hero image with seed track overlay
             ZStack(alignment: .bottomLeading) {
-                // Background image (using gradient as placeholder)
-                LinearGradient(
-                    colors: [Color.gray.opacity(0.3), Color.gray.opacity(0.5)],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-                .frame(height: 280)
-                .overlay {
-                    // Placeholder pattern
-                    Image(systemName: "music.note.list")
-                        .font(.system(size: 60))
-                        .foregroundColor(.white.opacity(0.3))
+                // Background image from Apple Music
+                if let artworkUrl = URL(string: playlist.seedArtwork), !playlist.seedArtwork.isEmpty {
+                    AsyncImage(url: artworkUrl) { phase in
+                        switch phase {
+                        case .empty:
+                            Rectangle()
+                                .fill(Color.pairBackgroundSecondary)
+                                .overlay {
+                                    ProgressView()
+                                        .tint(.pairTextSecondary)
+                                }
+                        case .success(let image):
+                            image
+                                .resizable()
+                                .aspectRatio(contentMode: .fill)
+                        case .failure:
+                            Rectangle()
+                                .fill(Color.pairBackgroundSecondary)
+                                .overlay {
+                                    Image(systemName: "music.note.list")
+                                        .font(.system(size: 60))
+                                        .foregroundColor(.pairTextTertiary)
+                                }
+                        @unknown default:
+                            Rectangle()
+                                .fill(Color.pairBackgroundSecondary)
+                        }
+                    }
+                    .frame(height: 280)
+                    .clipped()
+                } else {
+                    // Fallback gradient placeholder
+                    LinearGradient(
+                        colors: [Color.gray.opacity(0.3), Color.gray.opacity(0.5)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                    .frame(height: 280)
+                    .overlay {
+                        Image(systemName: "music.note.list")
+                            .font(.system(size: 60))
+                            .foregroundColor(.white.opacity(0.3))
+                    }
                 }
                 
                 // Dark gradient overlay at bottom
@@ -428,8 +399,9 @@ struct DiscoverHeroCard: View {
                     .font(.system(size: 13))
                     .foregroundColor(.pairTextSecondary)
             }
+            .padding(.horizontal, 16)
             .padding(.top, 16)
-            .padding(.bottom, 8)
+            .padding(.bottom, 16)
         }
         .background(Color.pairCardBackground)
         .cornerRadius(20)
@@ -474,6 +446,8 @@ struct TagPill: View {
 struct CuratedPlaylistDetailView: View {
     let playlist: CuratedPlaylist
     @Environment(\.dismiss) private var dismiss
+    @StateObject private var audioPlayer = AudioPlayer.shared
+    @State private var currentlyPlayingTrackId: String?
     
     var body: some View {
         NavigationStack {
@@ -508,14 +482,41 @@ struct CuratedPlaylistDetailView: View {
                     
                     // Seed track info
                     HStack(spacing: 12) {
-                        // Seed artwork placeholder
-                        RoundedRectangle(cornerRadius: 8)
-                            .fill(Color.pairBackgroundSecondary)
-                            .frame(width: 56, height: 56)
-                            .overlay {
-                                Image(systemName: "music.note")
-                                    .foregroundColor(.pairTextTertiary)
+                        // Seed artwork from Apple Music
+                        if let artworkUrl = URL(string: playlist.seedArtwork), !playlist.seedArtwork.isEmpty {
+                            AsyncImage(url: artworkUrl) { phase in
+                                switch phase {
+                                case .empty:
+                                    RoundedRectangle(cornerRadius: 8)
+                                        .fill(Color.pairBackgroundSecondary)
+                                        .overlay { ProgressView().tint(.pairTextSecondary) }
+                                case .success(let image):
+                                    image
+                                        .resizable()
+                                        .aspectRatio(contentMode: .fill)
+                                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                                case .failure:
+                                    RoundedRectangle(cornerRadius: 8)
+                                        .fill(Color.pairBackgroundSecondary)
+                                        .overlay {
+                                            Image(systemName: "music.note")
+                                                .foregroundColor(.pairTextTertiary)
+                                        }
+                                @unknown default:
+                                    RoundedRectangle(cornerRadius: 8)
+                                        .fill(Color.pairBackgroundSecondary)
+                                }
                             }
+                            .frame(width: 56, height: 56)
+                        } else {
+                            RoundedRectangle(cornerRadius: 8)
+                                .fill(Color.pairBackgroundSecondary)
+                                .frame(width: 56, height: 56)
+                                .overlay {
+                                    Image(systemName: "music.note")
+                                        .foregroundColor(.pairTextTertiary)
+                                }
+                        }
                         
                         VStack(alignment: .leading, spacing: 4) {
                             Text("Seed")
@@ -583,28 +584,69 @@ struct CuratedPlaylistDetailView: View {
                     // Track list
                     VStack(spacing: 0) {
                         ForEach(Array(playlist.tracks.enumerated()), id: \.element.id) { index, track in
-                            HStack(spacing: 16) {
-                                // Track number
-                                Text("\(index + 1)")
-                                    .font(.system(size: 14))
-                                    .foregroundColor(.pairTextTertiary)
-                                    .frame(width: 20)
-                                
-                                // Artwork placeholder
-                                RoundedRectangle(cornerRadius: 6)
-                                    .fill(Color.pairBackgroundSecondary)
-                                    .frame(width: 48, height: 48)
-                                    .overlay {
-                                        Image(systemName: "music.note")
-                                            .font(.system(size: 14))
-                                            .foregroundColor(.pairTextTertiary)
+                            HStack(spacing: 12) {
+                                // Track number or play button
+                                Button {
+                                    playTrack(track)
+                                } label: {
+                                    ZStack {
+                                        if currentlyPlayingTrackId == track.id && audioPlayer.isPlaying {
+                                            Image(systemName: "pause.fill")
+                                                .font(.system(size: 12))
+                                                .foregroundColor(.pairPurple)
+                                        } else {
+                                            Text("\(index + 1)")
+                                                .font(.system(size: 14))
+                                                .foregroundColor(.pairTextTertiary)
+                                        }
                                     }
+                                    .frame(width: 24)
+                                }
+                                .disabled(track.previewUrl.isEmpty)
+                                
+                                // Track artwork from Apple Music
+                                if let artworkUrl = URL(string: track.artworkUrl), !track.artworkUrl.isEmpty {
+                                    AsyncImage(url: artworkUrl) { phase in
+                                        switch phase {
+                                        case .empty:
+                                            RoundedRectangle(cornerRadius: 6)
+                                                .fill(Color.pairBackgroundSecondary)
+                                                .overlay { ProgressView().scaleEffect(0.5) }
+                                        case .success(let image):
+                                            image
+                                                .resizable()
+                                                .aspectRatio(contentMode: .fill)
+                                                .clipShape(RoundedRectangle(cornerRadius: 6))
+                                        case .failure:
+                                            RoundedRectangle(cornerRadius: 6)
+                                                .fill(Color.pairBackgroundSecondary)
+                                                .overlay {
+                                                    Image(systemName: "music.note")
+                                                        .font(.system(size: 14))
+                                                        .foregroundColor(.pairTextTertiary)
+                                                }
+                                        @unknown default:
+                                            RoundedRectangle(cornerRadius: 6)
+                                                .fill(Color.pairBackgroundSecondary)
+                                        }
+                                    }
+                                    .frame(width: 48, height: 48)
+                                } else {
+                                    RoundedRectangle(cornerRadius: 6)
+                                        .fill(Color.pairBackgroundSecondary)
+                                        .frame(width: 48, height: 48)
+                                        .overlay {
+                                            Image(systemName: "music.note")
+                                                .font(.system(size: 14))
+                                                .foregroundColor(.pairTextTertiary)
+                                        }
+                                }
                                 
                                 // Track info
                                 VStack(alignment: .leading, spacing: 4) {
                                     Text(track.name)
                                         .font(.system(size: 15, weight: .medium))
-                                        .foregroundColor(.pairTextPrimary)
+                                        .foregroundColor(currentlyPlayingTrackId == track.id ? .pairPurple : .pairTextPrimary)
                                         .lineLimit(1)
                                     
                                     Text(track.artist)
@@ -615,10 +657,21 @@ struct CuratedPlaylistDetailView: View {
                                 
                                 Spacer()
                                 
-                                // Duration
-                                Text(track.duration)
-                                    .font(.system(size: 14))
-                                    .foregroundColor(.pairTextTertiary)
+                                // Play button (if has preview URL)
+                                if !track.previewUrl.isEmpty {
+                                    Button {
+                                        playTrack(track)
+                                    } label: {
+                                        Image(systemName: currentlyPlayingTrackId == track.id && audioPlayer.isPlaying ? "pause.circle.fill" : "play.circle.fill")
+                                            .font(.system(size: 28))
+                                            .foregroundColor(currentlyPlayingTrackId == track.id ? .pairPurple : .pairTextSecondary)
+                                    }
+                                } else {
+                                    // Duration if no preview
+                                    Text(track.duration)
+                                        .font(.system(size: 14))
+                                        .foregroundColor(.pairTextTertiary)
+                                }
                             }
                             .padding(.vertical, 12)
                             
@@ -633,6 +686,17 @@ struct CuratedPlaylistDetailView: View {
             }
             .background(Color.pairBackground)
             .navigationBarHidden(true)
+        }
+    }
+    
+    private func playTrack(_ track: CuratedTrack) {
+        guard !track.previewUrl.isEmpty, let url = URL(string: track.previewUrl) else { return }
+        
+        if currentlyPlayingTrackId == track.id && audioPlayer.isPlaying {
+            audioPlayer.pause()
+        } else {
+            currentlyPlayingTrackId = track.id
+            audioPlayer.play(url: url)
         }
     }
 }

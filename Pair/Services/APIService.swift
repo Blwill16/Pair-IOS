@@ -378,6 +378,20 @@ class APIService: ObservableObject {
         let pairingsResponse = try JSONDecoder().decode(RecentPairingsResponse.self, from: data)
         return pairingsResponse.pairings
     }
+    
+    func fetchDiscoverPlaylists() async throws -> DiscoverResponse {
+        guard let url = URL(string: "\(baseURL)/api/discover") else {
+            throw APIError.invalidURL
+        }
+        
+        let (data, response) = try await URLSession.shared.data(from: url)
+        
+        guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
+            throw APIError.requestFailed
+        }
+        
+        return try JSONDecoder().decode(DiscoverResponse.self, from: data)
+    }
 }
 
 // MARK: - Recent Pairing Data Model
