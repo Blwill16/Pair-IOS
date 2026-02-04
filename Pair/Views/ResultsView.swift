@@ -513,11 +513,20 @@ struct SwipeCard: View {
         return audioPlayer.currentTrackId == result.trackId && audioPlayer.isPlaying
     }
     
+    private func slotTypeColor(for slotType: String) -> Color {
+        switch slotType {
+        case "core": return Color.pairPurple
+        case "flavor": return Color.orange
+        case "wildcard": return Color.green
+        default: return Color.gray
+        }
+    }
+    
     var body: some View {
         ZStack {
             // White card background
             VStack(spacing: 0) {
-                // Album artwork with play button
+                // Album artwork with play button and slot type badge
                 ZStack(alignment: .bottomTrailing) {
                     AsyncImage(url: URL(string: result.albumArtUrl ?? "")) { image in
                         image
@@ -535,6 +544,22 @@ struct SwipeCard: View {
                     .frame(width: UIScreen.main.bounds.width - 96, height: UIScreen.main.bounds.width - 96)
                     .clipped()
                     .cornerRadius(16)
+                    .overlay(alignment: .topLeading) {
+                        // Slot type badge
+                        if let slotType = result.slotType, !slotType.isEmpty {
+                            Text(result.slotTypeDisplay)
+                                .font(.caption2)
+                                .fontWeight(.semibold)
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 4)
+                                .background(
+                                    Capsule()
+                                        .fill(slotTypeColor(for: slotType))
+                                )
+                                .padding(8)
+                        }
+                    }
                     
                     // Play/Pause button overlay
                     if let previewUrl = result.previewUrl, isTopCard {
@@ -762,7 +787,9 @@ struct ResultRowView: View {
                         previewUrl: nil,
                         spotifyUrl: "https://spotify.com",
                         score: 0.85,
-                        explanation: "Similar tempo and energy"
+                        explanation: "Similar tempo and energy",
+                        slotType: "core",
+                        slotPosition: 1
                     )
                 ]
             ),

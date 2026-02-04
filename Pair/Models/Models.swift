@@ -29,8 +29,20 @@ struct PairingResult: Codable, Identifiable, Hashable {
     let spotifyUrl: String
     let score: Double?
     let explanation: String?
+    let slotType: String?
+    let slotPosition: Int?
     
     var id: String { trackId }
+    
+    // Computed property for display-friendly slot type
+    var slotTypeDisplay: String {
+        switch slotType {
+        case "core": return "Core Match"
+        case "flavor": return "Flavor Pick"
+        case "wildcard": return "Wildcard"
+        default: return ""
+        }
+    }
     
     enum CodingKeys: String, CodingKey {
         case trackId = "track_id"
@@ -41,6 +53,8 @@ struct PairingResult: Codable, Identifiable, Hashable {
         case spotifyUrl = "spotify_url"
         case score
         case explanation
+        case slotType = "slot_type"
+        case slotPosition = "slot_position"
     }
 }
 
