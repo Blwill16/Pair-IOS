@@ -109,14 +109,14 @@ struct ContentView: View {
     @EnvironmentObject var authManager: AuthManager
     @StateObject private var navigationState = NavigationState()
     @State private var selectedTab = 1
-    @State private var isProfileSetupComplete = false
+    @State private var isOnboardingComplete = false
     
     var body: some View {
         if !authManager.isAuthenticated {
             AuthView()
-        } else if !isProfileSetupComplete && authManager.currentUser != nil && !isProfileSetupCompleteForUser {
-            // Show profile setup for new users
-            ProfileSetupView(isProfileSetupComplete: $isProfileSetupComplete)
+        } else if !isOnboardingComplete && authManager.currentUser != nil && !isOnboardingCompleteForUser {
+            // Show 3-step onboarding for new users
+            OnboardingContainerView(isOnboardingComplete: $isOnboardingComplete)
         } else {
             ZStack(alignment: .bottom) {
                 // Light background for main app
@@ -150,7 +150,7 @@ struct ContentView: View {
         }
     }
     
-    private var isProfileSetupCompleteForUser: Bool {
+    private var isOnboardingCompleteForUser: Bool {
         guard let userId = authManager.currentUser?.id else { return true }
         return UserDefaults.standard.bool(forKey: "profileSetupComplete_\(userId)")
     }

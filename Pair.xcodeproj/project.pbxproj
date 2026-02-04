@@ -29,6 +29,9 @@
 		019 /* SongConfirmationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 120; };
 		020 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 121; };
 		022 /* ProfileSetupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 123; };
+		023 /* TasteSelectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 124; };
+		024 /* DiscoverTastemakersView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 125; };
+		025 /* OnboardingContainerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 126; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -56,6 +59,9 @@
 		121 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		122 /* LaunchScreen.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = LaunchScreen.storyboard; sourceTree = "<group>"; };
 		123 /* ProfileSetupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileSetupView.swift; sourceTree = "<group>"; };
+		124 /* TasteSelectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TasteSelectionView.swift; sourceTree = "<group>"; };
+		125 /* DiscoverTastemakersView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiscoverTastemakersView.swift; sourceTree = "<group>"; };
+		126 /* OnboardingContainerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingContainerView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -134,6 +140,9 @@
 				120 /* SongConfirmationView.swift */,
 				121 /* SettingsView.swift */,
 				123 /* ProfileSetupView.swift */,
+				124 /* TasteSelectionView.swift */,
+				125 /* DiscoverTastemakersView.swift */,
+				126 /* OnboardingContainerView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -241,6 +250,9 @@
 			019 /* SongConfirmationView.swift in Sources */,
 				020 /* SettingsView.swift in Sources */,
 				022 /* ProfileSetupView.swift in Sources */,
+				023 /* TasteSelectionView.swift in Sources */,
+				024 /* DiscoverTastemakersView.swift in Sources */,
+				025 /* OnboardingContainerView.swift in Sources */,
 				);
 				runOnlyForDeploymentPostprocessing = 0;
 			};
