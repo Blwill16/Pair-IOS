@@ -690,13 +690,13 @@ struct CuratedPlaylistDetailView: View {
     }
     
     private func playTrack(_ track: CuratedTrack) {
-        guard !track.previewUrl.isEmpty, let url = URL(string: track.previewUrl) else { return }
+        guard !track.previewUrl.isEmpty else { return }
         
         if currentlyPlayingTrackId == track.id && audioPlayer.isPlaying {
             audioPlayer.pause()
         } else {
             currentlyPlayingTrackId = track.id
-            audioPlayer.play(url: url)
+            audioPlayer.play(url: track.previewUrl, trackId: track.id)
         }
     }
 }
