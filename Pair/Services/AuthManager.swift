@@ -97,11 +97,11 @@ class AuthManager: ObservableObject {
         UserDefaults.standard.set(authResponse.accessToken, forKey: "accessToken")
     }
     
-    func signInWithMagicLink(email: String) async throws {
+    func sendOTP(email: String) async throws {
         isLoading = true
         defer { isLoading = false }
         
-        guard let url = URL(string: "\(supabaseURL)/auth/v1/magiclink") else {
+        guard let url = URL(string: "\(supabaseURL)/auth/v1/otp") else {
             throw AuthError.invalidURL
         }
         
@@ -112,9 +112,7 @@ class AuthManager: ObservableObject {
         
         let body: [String: Any] = [
             "email": email,
-            "options": [
-                "redirectTo": "pair://auth-callback"
-            ]
+            "create_user": true
         ]
         
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
@@ -126,37 +124,73 @@ class AuthManager: ObservableObject {
         }
     }
     
-    func handleMagicLinkCallback(url: URL) async throws {
+    func verifyOTP(email: String, token: String) async throws {
         isLoading = true
         defer { isLoading = false }
         
-        guard url.scheme == "pair", url.host == "auth-callback" else {
-            return
+        guard let url = URL(string: "\(supabaseURL)/auth/v1/verify") else {
+            throw AuthError.invalidURL
         }
         
-        guard let fragment = url.fragment else {
-            throw AuthError.invalidCredential
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue(supabaseAnonKey, forHTTPHeaderField: "apikey")
+        
+        let body: [String: Any] = [
+            "email": email,
+            "token": token,
+            "type": "email"
+        ]
+        
+        request.httpBody = try JSONSerialization.data(withJSONObject: body)
+        
+        let (data, response) = try await URLSession.shared.data(for: request)
+        
+        guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
+            throw AuthError.invalidCode
         }
         
-        var params: [String: String] = [:]
-        for pair in fragment.components(separatedBy: "&") {
-            let components = pair.components(separatedBy: "=")
-            if components.count == 2 {
-                params[components[0]] = components[1].removingPercentEncoding
+        struct VerifyResponse: Codable {
+            let accessToken: String
+            let refreshToken: String?
+            let user: VerifyUser
+            
+            enum CodingKeys: String, CodingKey {
+                case accessToken = "access_token"
+                case refreshToken = "refresh_token"
+                case user
             }
         }
         
-        guard let accessToken = params["access_token"] else {
-            throw AuthError.invalidCredential
+        struct VerifyUser: Codable {
+            let id: String
+            let email: String?
         }
         
-        UserDefaults.standard.set(accessToken, forKey: "accessToken")
+        let verifyResponse = try JSONDecoder().decode(VerifyResponse.self, from: data)
         
-        if let refreshToken = params["refresh_token"] {
+        UserDefaults.standard.set(verifyResponse.accessToken, forKey: "accessToken")
+        if let refreshToken = verifyResponse.refreshToken {
             UserDefaults.standard.set(refreshToken, forKey: "refreshToken")
         }
         
-        try await fetchCurrentUser(accessToken: accessToken)
+        let user = User(id: verifyResponse.user.id, email: verifyResponse.user.email)
+        self.currentUser = user
+        self.isAuthenticated = true
+        
+        if let userData = try? JSONEncoder().encode(user) {
+            UserDefaults.standard.set(userData, forKey: "currentUser")
+        }
+    }
+    
+    // Keep for backwards compatibility but not used
+    func signInWithMagicLink(email: String) async throws {
+        try await sendOTP(email: email)
+    }
+    
+    func handleMagicLinkCallback(url: URL) async throws {
+        // No longer used with OTP flow
     }
     
     private func fetchCurrentUser(accessToken: String) async throws {
@@ -210,6 +244,7 @@ enum AuthError: Error, LocalizedError {
     case invalidCredential
     case invalidURL
     case signInFailed
+    case invalidCode
     
     var errorDescription: String? {
         switch self {
@@ -219,6 +254,8 @@ enum AuthError: Error, LocalizedError {
             return "Invalid URL"
         case .signInFailed:
             return "Sign in failed"
+        case .invalidCode:
+            return "Invalid code"
         }
     }
 }

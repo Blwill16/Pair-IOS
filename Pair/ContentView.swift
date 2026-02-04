@@ -150,7 +150,8 @@ struct ContentView: View {
 struct AuthView: View {
     @EnvironmentObject var authManager: AuthManager
     @State private var email = ""
-    @State private var showMagicLinkSent = false
+    @State private var otpCode = ""
+    @State private var showOTPEntry = false
     @State private var errorMessage: String?
     @State private var isLoading = false
     
@@ -159,169 +160,275 @@ struct AuthView: View {
             // Solid purple background per Figma
             Color.pairPurple.ignoresSafeArea()
             
-            VStack(spacing: 0) {
-                Spacer()
-                
-                // Logo and tagline
-                VStack(spacing: 16) {
-                    Text("Pair")
-                        .font(.system(size: 42, weight: .bold))
-                        .foregroundColor(.white)
-                    
-                    Text("Discover music that belongs\ntogether")
-                        .font(.system(size: 18))
-                        .foregroundColor(.white.opacity(0.8))
-                        .multilineTextAlignment(.center)
-                }
-                .padding(.bottom, 80)
-                
-                Spacer()
-                
-                // Auth section at bottom
-                VStack(spacing: 16) {
-                    // Email input - frosted glass style
-                    TextField("", text: $email, prompt: Text("brendanpjwilliams@icloud.com").foregroundColor(.white.opacity(0.5)))
-                        .textContentType(.emailAddress)
-                        .keyboardType(.emailAddress)
-                        .autocapitalization(.none)
-                        .foregroundColor(.white)
-                        .padding(.horizontal, 20)
-                        .padding(.vertical, 18)
-                        .background(
-                            RoundedRectangle(cornerRadius: 16)
-                                .fill(Color.white.opacity(0.15))
-                        )
-                    
-                    // Send magic link button
-                    Button {
-                        sendMagicLink()
-                    } label: {
-                        if isLoading {
-                            ProgressView()
-                                .tint(.white)
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, 18)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 16)
-                                        .fill(Color.white.opacity(0.25))
-                                )
-                        } else {
-                            Text("Send magic link")
-                                .font(.system(size: 17, weight: .medium))
-                                .foregroundColor(.white.opacity(0.9))
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, 18)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 16)
-                                        .fill(Color.white.opacity(0.25))
-                                )
-                        }
-                    }
-                    .disabled(email.isEmpty || isLoading)
-                    .opacity(email.isEmpty ? 0.6 : 1)
-                    
-                    if let error = errorMessage {
-                        Text(error)
-                            .font(.caption)
-                            .foregroundColor(.red.opacity(0.9))
-                            .padding(.top, 4)
-                    }
-                }
-                .padding(.horizontal, 32)
-                .padding(.bottom, 24)
-                
-                // Footer - Terms and Privacy
-                Text("By continuing, you agree to Pair's Terms of Service\nand Privacy Policy")
-                    .font(.system(size: 13))
-                    .foregroundColor(.white.opacity(0.5))
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal, 32)
-                    .padding(.bottom, 48)
-            }
-            
-            // Custom modal overlay for "Check your email"
-            if showMagicLinkSent {
-                Color.black.opacity(0.4)
-                    .ignoresSafeArea()
-                    .onTapGesture {
-                        showMagicLinkSent = false
-                    }
-                
-                MagicLinkSentModal(email: email, isPresented: $showMagicLinkSent)
-                    .transition(.scale.combined(with: .opacity))
+            if showOTPEntry {
+                // OTP Code Entry Screen
+                otpEntryView
+            } else {
+                // Email Entry Screen
+                emailEntryView
             }
         }
-        .animation(.easeInOut(duration: 0.25), value: showMagicLinkSent)
         .onTapGesture {
             UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
         }
     }
     
-    private func sendMagicLink() {
+    private var emailEntryView: some View {
+        VStack(spacing: 0) {
+            Spacer()
+            
+            // Logo and tagline
+            VStack(spacing: 16) {
+                Text("Pair")
+                    .font(.system(size: 42, weight: .bold))
+                    .foregroundColor(.white)
+                
+                Text("Discover music that belongs\ntogether")
+                    .font(.system(size: 18))
+                    .foregroundColor(.white.opacity(0.8))
+                    .multilineTextAlignment(.center)
+            }
+            .padding(.bottom, 80)
+            
+            Spacer()
+            
+            // Auth section at bottom
+            VStack(spacing: 16) {
+                // Email input - frosted glass style
+                TextField("", text: $email, prompt: Text("your@email.com").foregroundColor(.white.opacity(0.5)))
+                    .textContentType(.emailAddress)
+                    .keyboardType(.emailAddress)
+                    .autocapitalization(.none)
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 18)
+                    .background(
+                        RoundedRectangle(cornerRadius: 16)
+                            .fill(Color.white.opacity(0.15))
+                    )
+                
+                // Send code button
+                Button {
+                    sendOTPCode()
+                } label: {
+                    if isLoading {
+                        ProgressView()
+                            .tint(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 18)
+                            .background(
+                                RoundedRectangle(cornerRadius: 16)
+                                    .fill(Color.white.opacity(0.25))
+                            )
+                    } else {
+                        Text("Send code")
+                            .font(.system(size: 17, weight: .medium))
+                            .foregroundColor(.white.opacity(0.9))
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 18)
+                            .background(
+                                RoundedRectangle(cornerRadius: 16)
+                                    .fill(Color.white.opacity(0.25))
+                            )
+                    }
+                }
+                .disabled(email.isEmpty || isLoading)
+                .opacity(email.isEmpty ? 0.6 : 1)
+                
+                if let error = errorMessage {
+                    Text(error)
+                        .font(.caption)
+                        .foregroundColor(.red.opacity(0.9))
+                        .padding(.top, 4)
+                }
+            }
+            .padding(.horizontal, 32)
+            .padding(.bottom, 24)
+            
+            // Footer - Terms and Privacy
+            Text("By continuing, you agree to Pair's Terms of Service\nand Privacy Policy")
+                .font(.system(size: 13))
+                .foregroundColor(.white.opacity(0.5))
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 32)
+                .padding(.bottom, 48)
+        }
+    }
+    
+    private var otpEntryView: some View {
+        VStack(spacing: 0) {
+            // Back button
+            HStack {
+                Button {
+                    withAnimation {
+                        showOTPEntry = false
+                        otpCode = ""
+                        errorMessage = nil
+                    }
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: "arrow.left")
+                            .font(.system(size: 16))
+                        Text("Back")
+                            .font(.system(size: 16))
+                    }
+                    .foregroundColor(.white.opacity(0.8))
+                }
+                Spacer()
+            }
+            .padding(.horizontal, 24)
+            .padding(.top, 16)
+            
+            Spacer()
+            
+            // Title and instructions
+            VStack(spacing: 16) {
+                Text("Enter your code")
+                    .font(.system(size: 32, weight: .bold))
+                    .foregroundColor(.white)
+                
+                Text("We sent a 6-digit code to\n\(email)")
+                    .font(.system(size: 16))
+                    .foregroundColor(.white.opacity(0.7))
+                    .multilineTextAlignment(.center)
+            }
+            .padding(.bottom, 48)
+            
+            // OTP Code input
+            VStack(spacing: 24) {
+                TextField("", text: $otpCode, prompt: Text("000000").foregroundColor(.white.opacity(0.3)))
+                    .keyboardType(.numberPad)
+                    .multilineTextAlignment(.center)
+                    .font(.system(size: 32, weight: .semibold, design: .monospaced))
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 20)
+                    .background(
+                        RoundedRectangle(cornerRadius: 16)
+                            .fill(Color.white.opacity(0.15))
+                    )
+                    .onChange(of: otpCode) { newValue in
+                        // Limit to 6 digits
+                        if newValue.count > 6 {
+                            otpCode = String(newValue.prefix(6))
+                        }
+                        // Auto-verify when 6 digits entered
+                        if newValue.count == 6 {
+                            verifyOTPCode()
+                        }
+                    }
+                
+                // Verify button
+                Button {
+                    verifyOTPCode()
+                } label: {
+                    if isLoading {
+                        ProgressView()
+                            .tint(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 18)
+                            .background(
+                                RoundedRectangle(cornerRadius: 16)
+                                    .fill(Color.white.opacity(0.25))
+                            )
+                    } else {
+                        Text("Verify")
+                            .font(.system(size: 17, weight: .medium))
+                            .foregroundColor(.white.opacity(0.9))
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 18)
+                            .background(
+                                RoundedRectangle(cornerRadius: 16)
+                                    .fill(Color.white.opacity(0.25))
+                            )
+                    }
+                }
+                .disabled(otpCode.count != 6 || isLoading)
+                .opacity(otpCode.count != 6 ? 0.6 : 1)
+                
+                if let error = errorMessage {
+                    Text(error)
+                        .font(.caption)
+                        .foregroundColor(.red.opacity(0.9))
+                }
+                
+                // Resend code button
+                Button {
+                    resendCode()
+                } label: {
+                    Text("Didn't receive a code? Resend")
+                        .font(.system(size: 14))
+                        .foregroundColor(.white.opacity(0.6))
+                }
+                .padding(.top, 8)
+            }
+            .padding(.horizontal, 32)
+            
+            Spacer()
+            Spacer()
+        }
+    }
+    
+    private func sendOTPCode() {
         isLoading = true
         errorMessage = nil
         
         Task {
             do {
-                try await authManager.signInWithMagicLink(email: email)
+                try await authManager.sendOTP(email: email)
                 await MainActor.run {
                     isLoading = false
-                    showMagicLinkSent = true
+                    withAnimation {
+                        showOTPEntry = true
+                    }
                 }
             } catch {
                 await MainActor.run {
                     isLoading = false
-                    errorMessage = "Sign in failed"
+                    errorMessage = "Failed to send code"
                 }
             }
         }
     }
-}
-
-// MARK: - Magic Link Sent Modal
-struct MagicLinkSentModal: View {
-    let email: String
-    @Binding var isPresented: Bool
     
-    var body: some View {
-        VStack(spacing: 24) {
-            VStack(spacing: 16) {
-                Text("Check your email")
-                    .font(.system(size: 24, weight: .bold))
-                    .foregroundColor(Color(hex: "1a1230"))
-                
-                VStack(spacing: 4) {
-                    Text("We sent a magic link to")
-                        .font(.system(size: 16))
-                        .foregroundColor(Color(hex: "1a1230").opacity(0.6))
-                    
-                    Text(email)
-                        .font(.system(size: 16, weight: .medium))
-                        .foregroundColor(Color(hex: "1a1230"))
+    private func verifyOTPCode() {
+        guard otpCode.count == 6 else { return }
+        
+        isLoading = true
+        errorMessage = nil
+        
+        Task {
+            do {
+                try await authManager.verifyOTP(email: email, token: otpCode)
+                // Auth manager will update isAuthenticated, which will dismiss this view
+            } catch {
+                await MainActor.run {
+                    isLoading = false
+                    errorMessage = "Invalid code. Please try again."
+                    otpCode = ""
                 }
             }
-            .padding(.top, 8)
-            
-            Button {
-                isPresented = false
-            } label: {
-                Text("OK")
-                    .font(.system(size: 17, weight: .medium))
-                    .foregroundColor(Color(hex: "1a1230"))
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 16)
-                    .background(
-                        RoundedRectangle(cornerRadius: 14)
-                            .fill(Color(hex: "f0f0f5"))
-                    )
+        }
+    }
+    
+    private func resendCode() {
+        isLoading = true
+        errorMessage = nil
+        
+        Task {
+            do {
+                try await authManager.sendOTP(email: email)
+                await MainActor.run {
+                    isLoading = false
+                    errorMessage = nil
+                }
+            } catch {
+                await MainActor.run {
+                    isLoading = false
+                    errorMessage = "Failed to resend code"
+                }
             }
         }
-        .padding(24)
-        .background(
-            RoundedRectangle(cornerRadius: 24)
-                .fill(Color.white)
-        )
-        .padding(.horizontal, 40)
     }
 }
 
