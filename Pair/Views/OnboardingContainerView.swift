@@ -288,10 +288,17 @@ struct ProfileSetupStepView: View {
                     return
                 }
                 
+                // Upload avatar if selected
+                var avatarUrl: String?
+                if let image = selectedImage {
+                    avatarUrl = try await uploadAvatar(image: image, userId: userId)
+                }
+                
                 try await saveProfileToAPI(
                     userId: userId,
                     displayName: displayName.trimmingCharacters(in: .whitespaces),
-                    username: username.trimmingCharacters(in: .whitespaces)
+                    username: username.trimmingCharacters(in: .whitespaces),
+                    avatarUrl: avatarUrl
                 )
                 
                 await MainActor.run {
@@ -311,7 +318,55 @@ struct ProfileSetupStepView: View {
         }
     }
     
-    private func saveProfileToAPI(userId: String, displayName: String, username: String) async throws {
+    private func uploadAvatar(image: UIImage, userId: String) async throws -> String? {
+        let baseURL = ProcessInfo.processInfo.environment["PAIR_API_BASE_URL"] ?? "https://pair-api-seven.vercel.app"
+        
+        guard let url = URL(string: "\(baseURL)/api/avatars") else {
+            return nil
+        }
+        
+        guard let imageData = image.jpegData(compressionQuality: 0.8) else {
+            return nil
+        }
+        
+        let boundary = UUID().uuidString
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
+        
+        var body = Data()
+        
+        // Add userId field
+        body.append("--\(boundary)\r\n".data(using: .utf8)!)
+        body.append("Content-Disposition: form-data; name=\"userId\"\r\n\r\n".data(using: .utf8)!)
+        body.append("\(userId)\r\n".data(using: .utf8)!)
+        
+        // Add file field
+        body.append("--\(boundary)\r\n".data(using: .utf8)!)
+        body.append("Content-Disposition: form-data; name=\"file\"; filename=\"avatar.jpg\"\r\n".data(using: .utf8)!)
+        body.append("Content-Type: image/jpeg\r\n\r\n".data(using: .utf8)!)
+        body.append(imageData)
+        body.append("\r\n".data(using: .utf8)!)
+        body.append("--\(boundary)--\r\n".data(using: .utf8)!)
+        
+        request.httpBody = body
+        
+        let (data, response) = try await URLSession.shared.data(for: request)
+        
+        guard let httpResponse = response as? HTTPURLResponse,
+              httpResponse.statusCode == 200 else {
+            return nil
+        }
+        
+        if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+           let avatarUrl = json["avatarUrl"] as? String {
+            return avatarUrl
+        }
+        
+        return nil
+    }
+    
+    private func saveProfileToAPI(userId: String, displayName: String, username: String, avatarUrl: String? = nil) async throws {
         let baseURL = ProcessInfo.processInfo.environment["PAIR_API_BASE_URL"] ?? "https://pair-api-seven.vercel.app"
         
         guard let url = URL(string: "\(baseURL)/api/profiles") else {
@@ -329,6 +384,10 @@ struct ProfileSetupStepView: View {
         
         if !username.isEmpty {
             body["username"] = username
+        }
+        
+        if let avatarUrl = avatarUrl {
+            body["avatarUrl"] = avatarUrl
         }
         
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
