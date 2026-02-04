@@ -152,183 +152,176 @@ struct AuthView: View {
     @State private var email = ""
     @State private var showMagicLinkSent = false
     @State private var errorMessage: String?
-    @State private var isEmailFocused = false
-    @State private var appearAnimation = false
+    @State private var isLoading = false
     
     var body: some View {
         ZStack {
-            AnimatedGradientBackground()
+            // Solid purple background per Figma
+            Color.pairPurple.ignoresSafeArea()
             
             VStack(spacing: 0) {
                 Spacer()
                 
-                // Logo and tagline with entrance animation
-                VStack(spacing: 20) {
-                    // Logo with glow effect
-                    PairLogo(size: 80)
-                        .logoGlow()
-                    
-                    // Brand name
+                // Logo and tagline
+                VStack(spacing: 16) {
                     Text("Pair")
-                        .font(.system(size: 48, weight: .bold))
+                        .font(.system(size: 42, weight: .bold))
                         .foregroundColor(.white)
                     
-                    // Tagline - per Figma: "Discover music that belongs together"
-                    Text("Discover music that belongs together")
-                        .font(.body)
-                        .foregroundColor(.white.opacity(0.7))
+                    Text("Discover music that belongs\ntogether")
+                        .font(.system(size: 18))
+                        .foregroundColor(.white.opacity(0.8))
+                        .multilineTextAlignment(.center)
                 }
-                .opacity(appearAnimation ? 1 : 0)
-                .offset(y: appearAnimation ? 0 : 20)
-                .animation(.easeOut(duration: 0.6), value: appearAnimation)
-                .padding(.bottom, 60)
-                
-                // Auth section
-                VStack(spacing: 24) {
-                    // Spotify button - Primary action per Figma
-                    Button {
-                        // Spotify login would go here
-                        authManager.continueAsGuest()
-                    } label: {
-                        HStack(spacing: 10) {
-                            Image(systemName: "music.note")
-                                .font(.system(size: 20))
-                            Text("Continue with Spotify")
-                                .font(.body)
-                                .fontWeight(.medium)
-                        }
-                        .foregroundColor(Color(hex: "1a1230")) // Dark text for contrast per Figma
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 16)
-                        .background(
-                            Capsule()
-                                .fill(Color.pairPurple)
-                        )
-                        .shadow(color: Color.pairPurple.opacity(0.25), radius: 24, x: 0, y: 6)
-                    }
-                    .scaleEffect(appearAnimation ? 1 : 0.95)
-                    .opacity(appearAnimation ? 1 : 0)
-                    .animation(.easeOut(duration: 0.6).delay(0.2), value: appearAnimation)
-                    
-                    // Divider with "or continue with email"
-                    HStack(spacing: 16) {
-                        Rectangle()
-                            .fill(Color.white.opacity(0.15))
-                            .frame(height: 1)
-                        Text("or continue with email")
-                            .font(.caption)
-                            .foregroundColor(.white.opacity(0.5))
-                        Rectangle()
-                            .fill(Color.white.opacity(0.15))
-                            .frame(height: 1)
-                    }
-                    .opacity(appearAnimation ? 1 : 0)
-                    .animation(.easeOut(duration: 0.6).delay(0.3), value: appearAnimation)
-                    
-                    // Email input with focus state
-                    VStack(spacing: 16) {
-                        TextField("", text: $email, prompt: Text("your@email.com").foregroundColor(.white.opacity(0.4)))
-                            .textContentType(.emailAddress)
-                            .keyboardType(.emailAddress)
-                            .autocapitalization(.none)
-                            .foregroundColor(.white)
-                            .padding(.horizontal, 20)
-                            .padding(.vertical, 16)
-                            .background(
-                                RoundedRectangle(cornerRadius: 16)
-                                    .fill(Color.white.opacity(0.08))
-                            )
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 16)
-                                    .stroke(
-                                        isEmailFocused ? Color.pairPurple.opacity(0.5) : Color.white.opacity(0.15),
-                                        lineWidth: isEmailFocused ? 2 : 1
-                                    )
-                            )
-                            .shadow(
-                                color: isEmailFocused ? Color.pairPurple.opacity(0.12) : Color.clear,
-                                radius: 16, x: 0, y: 4
-                            )
-                            .onTapGesture {
-                                isEmailFocused = true
-                            }
-                        
-                        // Magic link button - Secondary style per Figma
-                        Button {
-                            Task {
-                                do {
-                                    try await authManager.signInWithMagicLink(email: email)
-                                    showMagicLinkSent = true
-                                } catch {
-                                    errorMessage = error.localizedDescription
-                                }
-                            }
-                        } label: {
-                            Text("Send magic link")
-                                .font(.body)
-                                .fontWeight(.medium)
-                                .foregroundColor(.white)
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, 16)
-                                .background(
-                                    Capsule()
-                                        .fill(Color.white.opacity(0.1))
-                                )
-                                .overlay(
-                                    Capsule()
-                                        .stroke(Color.white.opacity(0.2), lineWidth: 1)
-                                )
-                        }
-                        .disabled(email.isEmpty)
-                        .opacity(email.isEmpty ? 0.5 : 1)
-                    }
-                    .opacity(appearAnimation ? 1 : 0)
-                    .animation(.easeOut(duration: 0.6).delay(0.4), value: appearAnimation)
-                    
-                    // Continue as guest - subtle link
-                    Button {
-                        authManager.continueAsGuest()
-                    } label: {
-                        Text("Continue as guest")
-                            .font(.subheadline)
-                            .foregroundColor(.white.opacity(0.5))
-                    }
-                    .padding(.top, 8)
-                    .opacity(appearAnimation ? 1 : 0)
-                    .animation(.easeOut(duration: 0.6).delay(0.5), value: appearAnimation)
-                }
-                .padding(.horizontal, 24)
-                
-                if let error = errorMessage {
-                    Text(error)
-                        .font(.caption)
-                        .foregroundColor(.red)
-                        .padding(.top, 12)
-                }
+                .padding(.bottom, 80)
                 
                 Spacer()
                 
-                // Footer
-                Text("By continuing, you agree to our Terms and Privacy Policy")
-                    .font(.caption2)
-                    .foregroundColor(.white.opacity(0.35))
+                // Auth section at bottom
+                VStack(spacing: 16) {
+                    // Email input - frosted glass style
+                    TextField("", text: $email, prompt: Text("brendanpjwilliams@icloud.com").foregroundColor(.white.opacity(0.5)))
+                        .textContentType(.emailAddress)
+                        .keyboardType(.emailAddress)
+                        .autocapitalization(.none)
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 20)
+                        .padding(.vertical, 18)
+                        .background(
+                            RoundedRectangle(cornerRadius: 16)
+                                .fill(Color.white.opacity(0.15))
+                        )
+                    
+                    // Send magic link button
+                    Button {
+                        sendMagicLink()
+                    } label: {
+                        if isLoading {
+                            ProgressView()
+                                .tint(.white)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 18)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 16)
+                                        .fill(Color.white.opacity(0.25))
+                                )
+                        } else {
+                            Text("Send magic link")
+                                .font(.system(size: 17, weight: .medium))
+                                .foregroundColor(.white.opacity(0.9))
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 18)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 16)
+                                        .fill(Color.white.opacity(0.25))
+                                )
+                        }
+                    }
+                    .disabled(email.isEmpty || isLoading)
+                    .opacity(email.isEmpty ? 0.6 : 1)
+                    
+                    if let error = errorMessage {
+                        Text(error)
+                            .font(.caption)
+                            .foregroundColor(.red.opacity(0.9))
+                            .padding(.top, 4)
+                    }
+                }
+                .padding(.horizontal, 32)
+                .padding(.bottom, 24)
+                
+                // Footer - Terms and Privacy
+                Text("By continuing, you agree to Pair's Terms of Service\nand Privacy Policy")
+                    .font(.system(size: 13))
+                    .foregroundColor(.white.opacity(0.5))
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, 32)
-                    .padding(.bottom, 32)
+                    .padding(.bottom, 48)
+            }
+            
+            // Custom modal overlay for "Check your email"
+            if showMagicLinkSent {
+                Color.black.opacity(0.4)
+                    .ignoresSafeArea()
+                    .onTapGesture {
+                        showMagicLinkSent = false
+                    }
+                
+                MagicLinkSentModal(email: email, isPresented: $showMagicLinkSent)
+                    .transition(.scale.combined(with: .opacity))
             }
         }
-        .onAppear {
-            appearAnimation = true
-        }
+        .animation(.easeInOut(duration: 0.25), value: showMagicLinkSent)
         .onTapGesture {
-            isEmailFocused = false
             UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
         }
-        .alert("Check your email", isPresented: $showMagicLinkSent) {
-            Button("OK", role: .cancel) {}
-        } message: {
-            Text("We sent a magic link to \(email)")
+    }
+    
+    private func sendMagicLink() {
+        isLoading = true
+        errorMessage = nil
+        
+        Task {
+            do {
+                try await authManager.signInWithMagicLink(email: email)
+                await MainActor.run {
+                    isLoading = false
+                    showMagicLinkSent = true
+                }
+            } catch {
+                await MainActor.run {
+                    isLoading = false
+                    errorMessage = "Sign in failed"
+                }
+            }
         }
+    }
+}
+
+// MARK: - Magic Link Sent Modal
+struct MagicLinkSentModal: View {
+    let email: String
+    @Binding var isPresented: Bool
+    
+    var body: some View {
+        VStack(spacing: 24) {
+            VStack(spacing: 16) {
+                Text("Check your email")
+                    .font(.system(size: 24, weight: .bold))
+                    .foregroundColor(Color(hex: "1a1230"))
+                
+                VStack(spacing: 4) {
+                    Text("We sent a magic link to")
+                        .font(.system(size: 16))
+                        .foregroundColor(Color(hex: "1a1230").opacity(0.6))
+                    
+                    Text(email)
+                        .font(.system(size: 16, weight: .medium))
+                        .foregroundColor(Color(hex: "1a1230"))
+                }
+            }
+            .padding(.top, 8)
+            
+            Button {
+                isPresented = false
+            } label: {
+                Text("OK")
+                    .font(.system(size: 17, weight: .medium))
+                    .foregroundColor(Color(hex: "1a1230"))
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 16)
+                    .background(
+                        RoundedRectangle(cornerRadius: 14)
+                            .fill(Color(hex: "f0f0f5"))
+                    )
+            }
+        }
+        .padding(24)
+        .background(
+            RoundedRectangle(cornerRadius: 24)
+                .fill(Color.white)
+        )
+        .padding(.horizontal, 40)
     }
 }
 
