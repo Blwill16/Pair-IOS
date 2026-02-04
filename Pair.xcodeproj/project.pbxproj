@@ -28,6 +28,7 @@
 		018 /* DesignSystem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 119; };
 		019 /* SongConfirmationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 120; };
 		020 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 121; };
+		022 /* ProfileSetupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 123; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -54,6 +55,7 @@
 		120 /* SongConfirmationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SongConfirmationView.swift; sourceTree = "<group>"; };
 		121 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		122 /* LaunchScreen.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = LaunchScreen.storyboard; sourceTree = "<group>"; };
+		123 /* ProfileSetupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileSetupView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -131,6 +133,7 @@
 				113 /* PlaylistDetailView.swift */,
 				120 /* SongConfirmationView.swift */,
 				121 /* SettingsView.swift */,
+				123 /* ProfileSetupView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -235,8 +238,9 @@
 				016 /* PlaylistRowView.swift in Sources */,
 				017 /* RemixManager.swift in Sources */,
 				018 /* DesignSystem.swift in Sources */,
-				019 /* SongConfirmationView.swift in Sources */,
+			019 /* SongConfirmationView.swift in Sources */,
 				020 /* SettingsView.swift in Sources */,
+				022 /* ProfileSetupView.swift in Sources */,
 				);
 				runOnlyForDeploymentPostprocessing = 0;
 			};

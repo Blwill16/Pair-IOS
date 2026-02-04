@@ -100,28 +100,57 @@ struct ProfileView: View {
                         // Profile avatar and info
                         VStack(spacing: 12) {
                             // Avatar - 96px circle per Figma
-                            Circle()
-                                .stroke(Color.pairCardBorder, lineWidth: 2)
-                                .frame(width: 96, height: 96)
-                                .overlay {
-                                    Image(systemName: "person.fill")
-                                        .font(.system(size: 40))
-                                        .foregroundColor(.pairTextTertiary)
+                            if let avatarUrl = profile?.avatarUrl, let url = URL(string: avatarUrl) {
+                                AsyncImage(url: url) { image in
+                                    image
+                                        .resizable()
+                                        .scaledToFill()
+                                        .frame(width: 96, height: 96)
+                                        .clipShape(Circle())
+                                } placeholder: {
+                                    Circle()
+                                        .stroke(Color.pairCardBorder, lineWidth: 2)
+                                        .frame(width: 96, height: 96)
+                                        .overlay {
+                                            Image(systemName: "person.fill")
+                                                .font(.system(size: 40))
+                                                .foregroundColor(.pairTextTertiary)
+                                        }
                                 }
                                 .shadow(color: Color.black.opacity(0.05), radius: 8, y: 2)
+                            } else {
+                                Circle()
+                                    .stroke(Color.pairCardBorder, lineWidth: 2)
+                                    .frame(width: 96, height: 96)
+                                    .overlay {
+                                        Image(systemName: "person.fill")
+                                            .font(.system(size: 40))
+                                            .foregroundColor(.pairTextTertiary)
+                                    }
+                                    .shadow(color: Color.black.opacity(0.05), radius: 8, y: 2)
+                            }
                             
-                            // Name
-                            Text("Jordan Moss")
+                            // Name - show real name or email
+                            Text(profile?.displayName ?? profile?.username ?? authManager.currentUser?.email ?? "Your Profile")
                                 .font(.system(size: 28, weight: .bold))
                                 .foregroundColor(.pairTextPrimary)
                             
+                            // Username if available
+                            if let username = profile?.username {
+                                Text("@\(username)")
+                                    .font(.subheadline)
+                                    .foregroundColor(.pairTextSecondary)
+                            }
+                            
                             // Bio - italic per Figma
-                            Text("Curator of late-night drives and rainy day moods")
-                                .font(.body)
-                                .italic()
-                                .foregroundColor(.pairTextSecondary)
-                                .multilineTextAlignment(.center)
-                                .frame(maxWidth: 320)
+                            if let bio = profile?.bio, !bio.isEmpty {
+                                Text(bio)
+                                    .font(.body)
+                                    .italic()
+                                    .foregroundColor(.pairTextSecondary)
+                                    .multilineTextAlignment(.center)
+                                    .frame(maxWidth: 320)
+                            }
                         }
                         .padding(.bottom, 16)
                         
@@ -131,7 +160,7 @@ struct ProfileView: View {
                             
                             // Pairings stat
                             VStack(spacing: 4) {
-                                Text("24")
+                                Text("\(profile?.playlists?.count ?? 0)")
                                     .font(.system(size: 24, weight: .bold))
                                     .foregroundColor(.pairTextPrimary)
                                 Text("Pairings")
@@ -150,7 +179,7 @@ struct ProfileView: View {
                             
                             // Followers stat
                             VStack(spacing: 4) {
-                                Text("156")
+                                Text("\(profile?.followerCount ?? 0)")
                                     .font(.system(size: 24, weight: .bold))
                                     .foregroundColor(.pairTextPrimary)
                                 Text("Followers")
@@ -169,7 +198,7 @@ struct ProfileView: View {
                             
                             // Following stat
                             VStack(spacing: 4) {
-                                Text("89")
+                                Text("\(profile?.followingCount ?? 0)")
                                     .font(.system(size: 24, weight: .bold))
                                     .foregroundColor(.pairTextPrimary)
                                 Text("Following")

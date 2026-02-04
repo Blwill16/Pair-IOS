@@ -109,10 +109,14 @@ struct ContentView: View {
     @EnvironmentObject var authManager: AuthManager
     @StateObject private var navigationState = NavigationState()
     @State private var selectedTab = 1
+    @State private var isProfileSetupComplete = false
     
     var body: some View {
         if !authManager.isAuthenticated {
             AuthView()
+        } else if !isProfileSetupComplete && authManager.currentUser != nil && !isProfileSetupCompleteForUser {
+            // Show profile setup for new users
+            ProfileSetupView(isProfileSetupComplete: $isProfileSetupComplete)
         } else {
             ZStack(alignment: .bottom) {
                 // Light background for main app
@@ -144,6 +148,11 @@ struct ContentView: View {
             }
             .ignoresSafeArea(.keyboard)
         }
+    }
+    
+    private var isProfileSetupCompleteForUser: Bool {
+        guard let userId = authManager.currentUser?.id else { return true }
+        return UserDefaults.standard.bool(forKey: "profileSetupComplete_\(userId)")
     }
 }
 
@@ -343,8 +352,8 @@ struct AuthView: View {
                             )
                     }
                 }
-                .disabled(otpCode.count != 6 || isLoading)
-                .opacity(otpCode.count != 6 ? 0.6 : 1)
+                                .disabled(otpCode.count != 6 || isLoading)
+                                .opacity(otpCode.count != 6 ? 0.6 : 1)
                 
                 if let error = errorMessage {
                     Text(error)
