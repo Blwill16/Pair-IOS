@@ -180,7 +180,7 @@ struct SoundWaveView: View {
             Circle()
                 .stroke(Color.white.opacity(0.3), lineWidth: 1)
                 .frame(width: 24 + (phase * 10), height: 24 + (phase * 10))
-                .opacity(1 - (phase * 0.5))
+                .opacity(Double(1.0 - (phase * 0.5)))
         }
         .onAppear {
             withAnimation(.linear(duration: 3).repeatForever(autoreverses: false)) {
