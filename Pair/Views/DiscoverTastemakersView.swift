@@ -29,9 +29,9 @@ struct DiscoverTastemakersView: View {
             Color.pairBackground.ignoresSafeArea()
             
             VStack(spacing: 0) {
-                // Progress bar - all 3 steps complete
+                // Progress bar - all 4 steps complete
                 HStack(spacing: 8) {
-                    ForEach(0..<3) { _ in
+                    ForEach(0..<4) { _ in
                         Rectangle()
                             .fill(Color.pairPurple)
                             .frame(height: 4)

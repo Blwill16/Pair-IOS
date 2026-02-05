@@ -16,6 +16,9 @@ struct OnboardingContainerView: View {
                 TasteSelectionView(currentStep: $currentStep)
                     .transition(.asymmetric(insertion: .move(edge: .trailing), removal: .move(edge: .leading)))
             case 3:
+                AppleMusicOnboardingStep(currentStep: $currentStep)
+                    .transition(.asymmetric(insertion: .move(edge: .trailing), removal: .move(edge: .leading)))
+            case 4:
                 DiscoverTastemakersView(isOnboardingComplete: $isOnboardingComplete)
                     .transition(.asymmetric(insertion: .move(edge: .trailing), removal: .move(edge: .leading)))
             default:
@@ -23,6 +26,190 @@ struct OnboardingContainerView: View {
             }
         }
         .animation(.easeInOut(duration: 0.3), value: currentStep)
+    }
+}
+
+// MARK: - Apple Music Onboarding Step (Step 3)
+struct AppleMusicOnboardingStep: View {
+    @Binding var currentStep: Int
+    @StateObject private var appleMusicManager = AppleMusicManager.shared
+    @State private var isConnecting = false
+    @State private var showError = false
+    @State private var errorMessage = ""
+    
+    var body: some View {
+        ZStack {
+            Color.pairBackground.ignoresSafeArea()
+            
+            VStack(spacing: 0) {
+                // Progress bar (4 steps now)
+                HStack(spacing: 8) {
+                    Rectangle()
+                        .fill(Color.pairPurple)
+                        .frame(height: 4)
+                        .cornerRadius(2)
+                    
+                    Rectangle()
+                        .fill(Color.pairPurple)
+                        .frame(height: 4)
+                        .cornerRadius(2)
+                    
+                    Rectangle()
+                        .fill(Color.pairPurple)
+                        .frame(height: 4)
+                        .cornerRadius(2)
+                    
+                    Rectangle()
+                        .fill(Color.pairCardBorder)
+                        .frame(height: 4)
+                        .cornerRadius(2)
+                }
+                .padding(.horizontal, 24)
+                .padding(.top, 24)
+                .padding(.bottom, 32)
+                
+                Spacer()
+                
+                // Apple Music icon
+                ZStack {
+                    Circle()
+                        .fill(
+                            LinearGradient(
+                                colors: [Color(red: 0.98, green: 0.24, blue: 0.35), Color(red: 0.85, green: 0.15, blue: 0.45)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                        .frame(width: 120, height: 120)
+                    
+                    Image(systemName: "music.note")
+                        .font(.system(size: 48, weight: .medium))
+                        .foregroundColor(.white)
+                }
+                .padding(.bottom, 32)
+                
+                // Title
+                Text("Connect Apple Music")
+                    .font(.system(size: 28, weight: .bold))
+                    .foregroundColor(.pairTextPrimary)
+                    .padding(.bottom, 12)
+                
+                // Description
+                Text("Pair uses your music library to understand\nyour taste and find tracks you'll love")
+                    .font(.system(size: 16))
+                    .foregroundColor(.pairTextSecondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 32)
+                    .padding(.bottom, 40)
+                
+                // Benefits list
+                VStack(alignment: .leading, spacing: 16) {
+                    OnboardingBenefitRow(icon: "waveform.path.ecg", text: "Personalized recommendations")
+                    OnboardingBenefitRow(icon: "heart.fill", text: "Save tracks to your library")
+                    OnboardingBenefitRow(icon: "sparkles", text: "Weekly drops curated for you")
+                }
+                .padding(.horizontal, 48)
+                
+                Spacer()
+                
+                // Bottom buttons
+                VStack(spacing: 16) {
+                    // Connect button
+                    Button {
+                        connectAppleMusic()
+                    } label: {
+                        HStack(spacing: 12) {
+                            if isConnecting {
+                                ProgressView()
+                                    .tint(.white)
+                            } else {
+                                Image(systemName: "applelogo")
+                                    .font(.system(size: 18))
+                                Text("Connect Apple Music")
+                                    .font(.system(size: 17, weight: .semibold))
+                            }
+                        }
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 18)
+                        .background(
+                            LinearGradient(
+                                colors: [Color(red: 0.98, green: 0.24, blue: 0.35), Color(red: 0.85, green: 0.15, blue: 0.45)],
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            )
+                        )
+                        .cornerRadius(20)
+                        .shadow(color: Color(red: 0.98, green: 0.24, blue: 0.35).opacity(0.3), radius: 8, y: 4)
+                    }
+                    .disabled(isConnecting)
+                    
+                    // Skip button
+                    Button {
+                        currentStep = 4
+                    } label: {
+                        Text("Skip for now")
+                            .font(.system(size: 15))
+                            .foregroundColor(.pairTextSecondary)
+                    }
+                }
+                .padding(.horizontal, 24)
+                .padding(.bottom, 48)
+            }
+        }
+        .alert("Connection Failed", isPresented: $showError) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(errorMessage)
+        }
+    }
+    
+    private func connectAppleMusic() {
+        isConnecting = true
+        
+        Task {
+            let success = await appleMusicManager.requestAuthorization()
+            
+            await MainActor.run {
+                isConnecting = false
+                
+                if success {
+                    currentStep = 4
+                } else {
+                    switch appleMusicManager.authorizationStatus {
+                    case .denied:
+                        errorMessage = "Apple Music access was denied. You can enable it later in Settings."
+                        showError = true
+                    case .restricted:
+                        errorMessage = "Apple Music access is restricted on this device."
+                        showError = true
+                    default:
+                        // User cancelled or other - just move on
+                        currentStep = 4
+                    }
+                }
+            }
+        }
+    }
+}
+
+struct OnboardingBenefitRow: View {
+    let icon: String
+    let text: String
+    
+    var body: some View {
+        HStack(spacing: 16) {
+            Image(systemName: icon)
+                .font(.system(size: 20))
+                .foregroundColor(.pairPurple)
+                .frame(width: 32)
+            
+            Text(text)
+                .font(.system(size: 15))
+                .foregroundColor(.pairTextPrimary)
+            
+            Spacer()
+        }
     }
 }
 
@@ -43,10 +230,15 @@ struct ProfileSetupStepView: View {
             Color.pairBackground.ignoresSafeArea()
             
             VStack(spacing: 0) {
-                // Progress bar
+                // Progress bar (4 steps)
                 HStack(spacing: 8) {
                     Rectangle()
                         .fill(Color.pairPurple)
+                        .frame(height: 4)
+                        .cornerRadius(2)
+                    
+                    Rectangle()
+                        .fill(Color.pairCardBorder)
                         .frame(height: 4)
                         .cornerRadius(2)
                     

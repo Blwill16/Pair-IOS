@@ -32,7 +32,7 @@ struct TasteSelectionView: View {
             Color.pairBackground.ignoresSafeArea()
             
             VStack(spacing: 0) {
-                // Progress bar
+                // Progress bar (4 steps)
                 HStack(spacing: 8) {
                     Rectangle()
                         .fill(Color.pairPurple)
@@ -41,6 +41,11 @@ struct TasteSelectionView: View {
                     
                     Rectangle()
                         .fill(Color.pairPurple)
+                        .frame(height: 4)
+                        .cornerRadius(2)
+                    
+                    Rectangle()
+                        .fill(Color.pairCardBorder)
                         .frame(height: 4)
                         .cornerRadius(2)
                     

@@ -218,6 +218,13 @@ struct ProfileView: View {
                         )
                         .padding(.bottom, 24)
                         
+                        // Apple Music connection section (only for own profile)
+                        if isOwnProfile {
+                            AppleMusicStatusView()
+                                .padding(.horizontal, 24)
+                                .padding(.bottom, 24)
+                        }
+                        
                         // Published Pairings section - 2 column grid per Figma
                         VStack(alignment: .leading, spacing: 16) {
                             Text("Pairings")
