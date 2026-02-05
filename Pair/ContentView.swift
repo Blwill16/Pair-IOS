@@ -157,39 +157,39 @@ struct ContentView: View {
 }
 
 // MARK: - Sound Wave Animation
-// Subtle, elegant wave animation matching Figma design
+// Two oscillating waves meeting at center, matching Figma design
 struct SoundWaveView: View {
     @State private var phase: CGFloat = 0
     
     var body: some View {
         ZStack {
-            // Left wave - gentle curve
-            SmoothWavePath(phase: phase, direction: .left)
-                .stroke(Color.white.opacity(0.5), lineWidth: 1.5)
+            // Left wave - oscillating sine wave
+            OscillatingWavePath(phase: phase, direction: .left)
+                .stroke(Color.white.opacity(0.6), lineWidth: 1.5)
             
-            // Right wave - gentle curve
-            SmoothWavePath(phase: phase, direction: .right)
-                .stroke(Color.white.opacity(0.5), lineWidth: 1.5)
+            // Right wave - oscillating sine wave (opposite phase)
+            OscillatingWavePath(phase: phase, direction: .right)
+                .stroke(Color.white.opacity(0.6), lineWidth: 1.5)
             
-            // Center merge point - subtle pulsing dot
+            // Center merge point - glowing dot
             Circle()
-                .fill(Color.white.opacity(0.8))
-                .frame(width: 10, height: 10)
-                .shadow(color: .white.opacity(0.4), radius: 6, x: 0, y: 0)
+                .fill(Color.white)
+                .frame(width: 12, height: 12)
+                .shadow(color: .white.opacity(0.6), radius: 10, x: 0, y: 0)
         }
         .onAppear {
-            withAnimation(.easeInOut(duration: 3).repeatForever(autoreverses: true)) {
+            withAnimation(.linear(duration: 2).repeatForever(autoreverses: false)) {
                 phase = 1
             }
         }
     }
 }
 
-struct SmoothWavePath: Shape {
+struct OscillatingWavePath: Shape {
     var phase: CGFloat
-    var direction: SmoothWaveDirection
+    var direction: WaveDirection
     
-    enum SmoothWaveDirection {
+    enum WaveDirection {
         case left, right
     }
     
@@ -202,32 +202,35 @@ struct SmoothWavePath: Shape {
         var path = Path()
         let midY = rect.midY
         let midX = rect.midX
-        
-        // Much gentler wave - single smooth curve like in Figma
-        let amplitude: CGFloat = 15 * (0.8 + phase * 0.4) // Subtle breathing
+        let amplitude: CGFloat = 12
+        let wavelength: CGFloat = 50
         
         if direction == .left {
-            // Smooth curve from left edge to center
+            // Wave from left edge to center with sine oscillation
             path.move(to: CGPoint(x: 0, y: midY))
-            
-            // Use bezier curve for smooth organic wave
-            let controlY = midY - amplitude
-            path.addQuadCurve(
-                to: CGPoint(x: midX - 20, y: midY),
-                control: CGPoint(x: midX * 0.5, y: controlY)
-            )
-            path.addLine(to: CGPoint(x: midX, y: midY))
+            var x: CGFloat = 0
+            while x <= midX {
+                let progress = x / midX // 0 to 1 as we approach center
+                let wavePhase = (x / wavelength) + (phase * 2 * .pi)
+                // Amplitude decreases as we approach center
+                let localAmplitude = amplitude * (1 - progress * 0.5)
+                let y = midY + sin(wavePhase) * localAmplitude
+                path.addLine(to: CGPoint(x: x, y: y))
+                x += 2
+            }
         } else {
-            // Smooth curve from right edge to center
+            // Wave from right edge to center with sine oscillation (opposite direction)
             path.move(to: CGPoint(x: rect.width, y: midY))
-            
-            // Use bezier curve for smooth organic wave
-            let controlY = midY + amplitude
-            path.addQuadCurve(
-                to: CGPoint(x: midX + 20, y: midY),
-                control: CGPoint(x: midX + (rect.width - midX) * 0.5, y: controlY)
-            )
-            path.addLine(to: CGPoint(x: midX, y: midY))
+            var x: CGFloat = rect.width
+            while x >= midX {
+                let progress = (rect.width - x) / (rect.width - midX) // 0 to 1 as we approach center
+                let wavePhase = ((rect.width - x) / wavelength) + (phase * 2 * .pi)
+                // Amplitude decreases as we approach center, opposite phase
+                let localAmplitude = amplitude * (1 - progress * 0.5)
+                let y = midY - sin(wavePhase) * localAmplitude // Negative for opposite oscillation
+                path.addLine(to: CGPoint(x: x, y: y))
+                x -= 2
+            }
         }
         
         return path
@@ -298,21 +301,29 @@ struct AuthView: View {
             
             // Auth section at bottom
             VStack(spacing: 16) {
-                // Email input - frosted glass style with faded white placeholder
-                TextField("", text: $email, prompt: Text("your@email.com").foregroundColor(.white.opacity(0.4)))
-                    .textContentType(.emailAddress)
-                    .keyboardType(.emailAddress)
-                    .autocapitalization(.none)
-                    .disableAutocorrection(true)
-                    .foregroundColor(.white)
-                    .tint(.white) // Cursor color
-                    .accentColor(.white) // Selection color
-                    .padding(.horizontal, 20)
-                    .padding(.vertical, 18)
-                    .background(
-                        RoundedRectangle(cornerRadius: 16)
-                            .fill(Color.white.opacity(0.15))
-                    )
+                // Email input - frosted glass style with custom white placeholder
+                ZStack(alignment: .leading) {
+                    // Custom placeholder that's actually white
+                    if email.isEmpty {
+                        Text("your@email.com")
+                            .foregroundColor(.white.opacity(0.5))
+                            .padding(.horizontal, 20)
+                    }
+                    
+                    TextField("", text: $email)
+                        .textContentType(.emailAddress)
+                        .keyboardType(.emailAddress)
+                        .autocapitalization(.none)
+                        .disableAutocorrection(true)
+                        .foregroundColor(.white)
+                        .tint(.white)
+                        .padding(.horizontal, 20)
+                }
+                .padding(.vertical, 18)
+                .background(
+                    RoundedRectangle(cornerRadius: 16)
+                        .fill(Color.white.opacity(0.15))
+                )
                 
                 // Send magic link button
                 Button {
