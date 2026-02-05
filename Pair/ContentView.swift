@@ -115,36 +115,31 @@ struct ContentView: View {
         if !authManager.isAuthenticated {
             AuthView()
         } else if !isOnboardingComplete && authManager.currentUser != nil && !isOnboardingCompleteForUser {
-            // Show 3-step onboarding for new users
-            OnboardingContainerView(isOnboardingComplete: $isOnboardingComplete)
+            // Show new Figma-designed onboarding flow
+            NewOnboardingContainerView(isOnboardingComplete: $isOnboardingComplete)
         } else {
+            // New Figma-designed main app with bottom navigation
             ZStack(alignment: .bottom) {
-                // Light background for main app
-                Color.pairBackground.ignoresSafeArea()
+                Color.white.ignoresSafeArea()
                 
                 TabView(selection: $selectedTab) {
-                    // Tab 0: Discover (compass icon)
-                    ExploreView()
+                    // Tab 0: Curated Genres (Home)
+                    CuratedGenresView()
                         .tag(0)
                     
-                    // Tab 1: Create (+ icon) - Search/Create flow
+                    // Tab 1: Now Playing (center waveform)
                     SearchView()
                         .tag(1)
                     
-                    // Tab 2: Profile (person icon)
-                    ProfileView(userId: authManager.userId)
+                    // Tab 2: Profile
+                    NewProfileView()
                         .tag(2)
                 }
                 .tabViewStyle(.page(indexDisplayMode: .never))
                 .environmentObject(navigationState)
                 
-                // Floating nav bar with smart auto-hide
-                // Uses translateY animation per Figma spec
-                FloatingNavBar(selectedTab: $selectedTab)
-                    .padding(.bottom, 20)
-                    .offset(y: navigationState.isNavBarVisible ? 0 : 100)
-                    .opacity(navigationState.isNavBarVisible ? 1 : 0)
-                    .animation(.easeInOut(duration: 0.3), value: navigationState.isNavBarVisible)
+                // New bottom navigation per Figma
+                NewBottomNavigation(selectedTab: $selectedTab)
             }
             .ignoresSafeArea(.keyboard)
         }
