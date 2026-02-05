@@ -3,9 +3,9 @@ import SwiftUI
 // MARK: - Screen 9: Curated Genres (Home)
 struct CuratedGenresView: View {
     @EnvironmentObject var authManager: AuthManager
-    @State private var genres: [CuratedGenreData] = []
+    @State private var genres: [WeeklyGenreData] = []
     @State private var isLoading = true
-    @State private var selectedTrack: CuratedTrack?
+    @State private var selectedTrack: WeeklyTrackData?
     @State private var showNowPlaying = false
     
     var body: some View {
@@ -81,40 +81,40 @@ struct CuratedGenresView: View {
         
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
             genres = [
-                CuratedGenreData(
+                WeeklyGenreData(
                     name: "Melodic Electronic",
                     descriptor: "Atmospheric - emotional - long-form",
                     tracks: [
-                        CuratedTrack(title: "Cascade", artist: "Olafur Arnalds", artworkUrl: "https://picsum.photos/seed/cascade/200"),
-                        CuratedTrack(title: "Echo Chambers", artist: "Nils Frahm", artworkUrl: "https://picsum.photos/seed/echo/200"),
-                        CuratedTrack(title: "Weightless", artist: "Kiasmos", artworkUrl: "https://picsum.photos/seed/weightless/200"),
-                        CuratedTrack(title: "Drifting", artist: "Jon Hopkins", artworkUrl: "https://picsum.photos/seed/drifting/200")
+                        WeeklyTrackData(title: "Cascade", artist: "Olafur Arnalds", artworkUrl: "https://picsum.photos/seed/cascade/200"),
+                        WeeklyTrackData(title: "Echo Chambers", artist: "Nils Frahm", artworkUrl: "https://picsum.photos/seed/echo/200"),
+                        WeeklyTrackData(title: "Weightless", artist: "Kiasmos", artworkUrl: "https://picsum.photos/seed/weightless/200"),
+                        WeeklyTrackData(title: "Drifting", artist: "Jon Hopkins", artworkUrl: "https://picsum.photos/seed/drifting/200")
                     ]
                 ),
-                CuratedGenreData(
+                WeeklyGenreData(
                     name: "Indie Dance",
                     descriptor: "Groove-forward - restrained",
                     tracks: [
-                        CuratedTrack(title: "Midnight City", artist: "M83", artworkUrl: "https://picsum.photos/seed/midnight/200"),
-                        CuratedTrack(title: "Opus", artist: "Eric Prydz", artworkUrl: "https://picsum.photos/seed/opus/200")
+                        WeeklyTrackData(title: "Midnight City", artist: "M83", artworkUrl: "https://picsum.photos/seed/midnight/200"),
+                        WeeklyTrackData(title: "Opus", artist: "Eric Prydz", artworkUrl: "https://picsum.photos/seed/opus/200")
                     ]
                 ),
-                CuratedGenreData(
+                WeeklyGenreData(
                     name: "Dream Pop",
                     descriptor: "Soft focus - textural",
                     tracks: [
-                        CuratedTrack(title: "Space Song", artist: "Beach House", artworkUrl: "https://picsum.photos/seed/space/200"),
-                        CuratedTrack(title: "Cherry", artist: "Chromatics", artworkUrl: "https://picsum.photos/seed/cherry/200"),
-                        CuratedTrack(title: "Myth", artist: "Beach House", artworkUrl: "https://picsum.photos/seed/myth/200")
+                        WeeklyTrackData(title: "Space Song", artist: "Beach House", artworkUrl: "https://picsum.photos/seed/space/200"),
+                        WeeklyTrackData(title: "Cherry", artist: "Chromatics", artworkUrl: "https://picsum.photos/seed/cherry/200"),
+                        WeeklyTrackData(title: "Myth", artist: "Beach House", artworkUrl: "https://picsum.photos/seed/myth/200")
                     ]
                 ),
-                CuratedGenreData(
+                WeeklyGenreData(
                     name: "Alt R&B",
                     descriptor: "Intimate - boundary-pushing",
                     tracks: [
-                        CuratedTrack(title: "Thinkin Bout You", artist: "Frank Ocean", artworkUrl: "https://picsum.photos/seed/thinkin/200"),
-                        CuratedTrack(title: "Blinding Lights", artist: "The Weeknd", artworkUrl: "https://picsum.photos/seed/blinding/200"),
-                        CuratedTrack(title: "Pink + White", artist: "Frank Ocean", artworkUrl: "https://picsum.photos/seed/pink/200")
+                        WeeklyTrackData(title: "Thinkin Bout You", artist: "Frank Ocean", artworkUrl: "https://picsum.photos/seed/thinkin/200"),
+                        WeeklyTrackData(title: "Blinding Lights", artist: "The Weeknd", artworkUrl: "https://picsum.photos/seed/blinding/200"),
+                        WeeklyTrackData(title: "Pink + White", artist: "Frank Ocean", artworkUrl: "https://picsum.photos/seed/pink/200")
                     ]
                 )
             ]
@@ -125,8 +125,8 @@ struct CuratedGenresView: View {
 
 // MARK: - Genre Section
 struct GenreSection: View {
-    let genre: CuratedGenreData
-    let onTrackTap: (CuratedTrack) -> Void
+    let genre: WeeklyGenreData
+    let onTrackTap: (WeeklyTrackData) -> Void
     
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -157,7 +157,7 @@ struct GenreSection: View {
 
 // MARK: - Track Row
 struct TrackRow: View {
-    let track: CuratedTrack
+    let track: WeeklyTrackData
     
     var body: some View {
         HStack(spacing: 16) {
@@ -193,14 +193,14 @@ struct TrackRow: View {
 }
 
 // MARK: - Data Models
-struct CuratedGenreData: Identifiable {
+struct WeeklyGenreData: Identifiable {
     let id = UUID()
     let name: String
     let descriptor: String
-    let tracks: [CuratedTrack]
+    let tracks: [WeeklyTrackData]
 }
 
-struct CuratedTrack: Identifiable {
+struct WeeklyTrackData: Identifiable {
     let id = UUID()
     let title: String
     let artist: String
@@ -211,7 +211,7 @@ struct CuratedTrack: Identifiable {
 
 // MARK: - Screen 11: Now Playing
 struct NowPlayingView: View {
-    let track: CuratedTrack
+    let track: WeeklyTrackData
     @Binding var isPresented: Bool
     @State private var isSaved = false
     
