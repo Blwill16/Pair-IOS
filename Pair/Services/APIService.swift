@@ -7,7 +7,7 @@ class APIService: ObservableObject {
     // Vercel deployment URL
     private static let defaultBaseURL = "https://pair-api-seven.vercel.app"
     
-    private let baseURL: String
+    let baseURL: String
     
     init() {
         self.baseURL = ProcessInfo.processInfo.environment["PAIR_API_BASE_URL"] ?? APIService.defaultBaseURL

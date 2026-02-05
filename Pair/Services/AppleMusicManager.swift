@@ -150,17 +150,17 @@ class AppleMusicManager: ObservableObject {
     }
     
     /// Create or get the "Pair — Saved" playlist
-    func getOrCreatePairPlaylist() async -> MusicItemID? {
+    func getOrCreatePairPlaylist() async -> MusicKit.Playlist? {
         guard isAuthorized else { return nil }
         
         do {
-            // Search for existing Pair playlist
-            var request = MusicLibraryRequest<Playlist>()
-            request.filter(matching: \.name, equalTo: "Pair — Saved")
+            // Search for existing Pair playlist in library
+            let request = MusicLibraryRequest<MusicKit.Playlist>()
             let response = try await request.response()
             
-            if let existingPlaylist = response.items.first {
-                return existingPlaylist.id
+            // Find playlist by name
+            if let existingPlaylist = response.items.first(where: { $0.name == "Pair — Saved" }) {
+                return existingPlaylist
             }
             
             // Create new playlist
@@ -169,7 +169,7 @@ class AppleMusicManager: ObservableObject {
                 description: "Tracks saved from Pair Music"
             )
             
-            return newPlaylist.id
+            return newPlaylist
         } catch {
             print("Failed to get/create Pair playlist: \(error)")
             return nil
@@ -187,13 +187,7 @@ class AppleMusicManager: ObservableObject {
             guard let song = songResponse.items.first else { return false }
             
             // Get or create the Pair playlist
-            guard let playlistId = await getOrCreatePairPlaylist() else { return false }
-            
-            // Get the playlist
-            var playlistRequest = MusicLibraryRequest<Playlist>()
-            playlistRequest.filter(matching: \.id, equalTo: playlistId)
-            let playlistResponse = try await playlistRequest.response()
-            guard let playlist = playlistResponse.items.first else { return false }
+            guard let playlist = await getOrCreatePairPlaylist() else { return false }
             
             // Add the song to the playlist
             try await MusicLibrary.shared.add(song, to: playlist)
