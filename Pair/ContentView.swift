@@ -157,64 +157,50 @@ struct ContentView: View {
 }
 
 // MARK: - Sound Wave Animation
-// Two waves with opposite motion meeting at center, per animation guide
+// One continuous S-curve wave that breathes, with pulsing center glow
 struct SoundWaveView: View {
-    @State private var waveOffset: CGFloat = -40
+    @State private var amplitude: CGFloat = 0
     @State private var glowScale: CGFloat = 1.0
     @State private var glowOpacity: Double = 0.3
-    @State private var pulseScale: CGFloat = 1.0
-    @State private var pulseOpacity: Double = 0.9
     
     var body: some View {
         ZStack {
-            // Left wave (curves up when offset is negative, down when positive)
-            WavePath(offset: waveOffset, isReversed: false)
+            // Single continuous S-curve wave across the screen
+            SCurveWavePath(amplitude: amplitude)
                 .stroke(Color.white.opacity(0.6), lineWidth: 2)
             
-            // Right wave (opposite motion - curves down when offset is negative, up when positive)
-            WavePath(offset: waveOffset, isReversed: true)
-                .stroke(Color.white.opacity(0.6), lineWidth: 2)
-            
-            // Outer glow
+            // Outer glow circle
             Circle()
                 .fill(Color.white.opacity(glowOpacity))
-                .frame(width: 32, height: 32)
+                .frame(width: 40, height: 40)
                 .scaleEffect(glowScale)
             
-            // Inner merge point
+            // Center dot
             Circle()
-                .fill(Color.white.opacity(pulseOpacity))
+                .fill(Color.white.opacity(0.9))
                 .frame(width: 16, height: 16)
-                .scaleEffect(pulseScale)
         }
         .onAppear {
-            // Wave animation (3 seconds)
+            // Wave breathing animation (3 seconds)
             withAnimation(.easeInOut(duration: 3.0).repeatForever(autoreverses: true)) {
-                waveOffset = 40
+                amplitude = 40
             }
             
-            // Glow animation (2 seconds)
+            // Glow pulsing animation (2 seconds, offset timing)
             withAnimation(.easeInOut(duration: 2.0).repeatForever(autoreverses: true)) {
-                glowScale = 1.3
+                glowScale = 1.4
                 glowOpacity = 0.5
-            }
-            
-            // Pulse animation (2 seconds)
-            withAnimation(.easeInOut(duration: 2.0).repeatForever(autoreverses: true)) {
-                pulseScale = 1.1
-                pulseOpacity = 0.6
             }
         }
     }
 }
 
-struct WavePath: Shape {
-    var offset: CGFloat
-    var isReversed: Bool
+struct SCurveWavePath: Shape {
+    var amplitude: CGFloat
     
     var animatableData: CGFloat {
-        get { offset }
-        set { offset = newValue }
+        get { amplitude }
+        set { amplitude = newValue }
     }
     
     func path(in rect: CGRect) -> Path {
@@ -222,32 +208,23 @@ struct WavePath: Shape {
         let midY = rect.midY
         let midX = rect.midX
         
-        // Control point Y varies with offset (opposite for each wave)
-        let controlY = midY + (isReversed ? offset : -offset)
+        // Start from left edge at midY
+        path.move(to: CGPoint(x: 0, y: midY))
         
-        if isReversed {
-            // Right wave (comes from right edge to center)
-            path.move(to: CGPoint(x: rect.width, y: midY))
-            path.addQuadCurve(
-                to: CGPoint(x: rect.width * 0.75, y: midY),
-                control: CGPoint(x: rect.width * 0.875, y: controlY)
-            )
-            path.addQuadCurve(
-                to: CGPoint(x: midX, y: midY),
-                control: CGPoint(x: rect.width * 0.625, y: midY)
-            )
-        } else {
-            // Left wave (comes from left edge to center)
-            path.move(to: CGPoint(x: 0, y: midY))
-            path.addQuadCurve(
-                to: CGPoint(x: rect.width * 0.25, y: midY),
-                control: CGPoint(x: rect.width * 0.125, y: controlY)
-            )
-            path.addQuadCurve(
-                to: CGPoint(x: midX, y: midY),
-                control: CGPoint(x: rect.width * 0.375, y: midY)
-            )
-        }
+        // Left half: curves DOWN first (when amplitude > 0), then back to center
+        // Using cubic bezier for smooth S-curve
+        path.addCurve(
+            to: CGPoint(x: midX, y: midY),
+            control1: CGPoint(x: rect.width * 0.25, y: midY + amplitude),
+            control2: CGPoint(x: rect.width * 0.40, y: midY + amplitude * 0.3)
+        )
+        
+        // Right half: curves UP (opposite of left), then back to edge
+        path.addCurve(
+            to: CGPoint(x: rect.width, y: midY),
+            control1: CGPoint(x: rect.width * 0.60, y: midY - amplitude * 0.3),
+            control2: CGPoint(x: rect.width * 0.75, y: midY - amplitude)
+        )
         
         return path
     }
