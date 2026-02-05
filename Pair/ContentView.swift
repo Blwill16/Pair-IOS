@@ -209,22 +209,27 @@ struct WavePath: Shape {
         let midX = rect.midX
         let amplitude: CGFloat = 20
         let wavelength: CGFloat = 60
+        let step: CGFloat = 2
         
         if direction == .left {
             // Wave from left to center
             path.move(to: CGPoint(x: 0, y: midY))
-            for x in stride(from: 0, through: midX, by: 2) {
+            var x: CGFloat = 0
+            while x <= midX {
                 let relativeX = x / wavelength
                 let y = midY + sin((relativeX + phase) * .pi * 2) * amplitude * (x / midX)
                 path.addLine(to: CGPoint(x: x, y: y))
+                x += step
             }
         } else {
             // Wave from right to center
             path.move(to: CGPoint(x: rect.width, y: midY))
-            for x in stride(from: rect.width, through: midX, by: -2) {
+            var x: CGFloat = rect.width
+            while x >= midX {
                 let relativeX = (rect.width - x) / wavelength
                 let y = midY + sin((relativeX + phase) * .pi * 2) * amplitude * ((rect.width - x) / (rect.width - midX))
                 path.addLine(to: CGPoint(x: x, y: y))
+                x -= step
             }
         }
         
