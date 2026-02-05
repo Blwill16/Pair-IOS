@@ -157,44 +157,39 @@ struct ContentView: View {
 }
 
 // MARK: - Sound Wave Animation
+// Subtle, elegant wave animation matching Figma design
 struct SoundWaveView: View {
     @State private var phase: CGFloat = 0
     
     var body: some View {
         ZStack {
-            // Left wave
-            WavePath(phase: phase, direction: .left)
-                .stroke(Color.white.opacity(0.6), lineWidth: 2)
+            // Left wave - gentle curve
+            SmoothWavePath(phase: phase, direction: .left)
+                .stroke(Color.white.opacity(0.5), lineWidth: 1.5)
             
-            // Right wave
-            WavePath(phase: phase, direction: .right)
-                .stroke(Color.white.opacity(0.6), lineWidth: 2)
+            // Right wave - gentle curve
+            SmoothWavePath(phase: phase, direction: .right)
+                .stroke(Color.white.opacity(0.5), lineWidth: 1.5)
             
-            // Center merge point - pulsing dot
+            // Center merge point - subtle pulsing dot
             Circle()
-                .fill(Color.white)
-                .frame(width: 12, height: 12)
-                .shadow(color: .white.opacity(0.5), radius: 8, x: 0, y: 0)
-            
-            // Expanding glow ring
-            Circle()
-                .stroke(Color.white.opacity(0.3), lineWidth: 1)
-                .frame(width: 24 + (phase * 10), height: 24 + (phase * 10))
-                .opacity(Double(1.0 - (phase * 0.5)))
+                .fill(Color.white.opacity(0.8))
+                .frame(width: 10, height: 10)
+                .shadow(color: .white.opacity(0.4), radius: 6, x: 0, y: 0)
         }
         .onAppear {
-            withAnimation(.linear(duration: 3).repeatForever(autoreverses: false)) {
+            withAnimation(.easeInOut(duration: 3).repeatForever(autoreverses: true)) {
                 phase = 1
             }
         }
     }
 }
 
-struct WavePath: Shape {
+struct SmoothWavePath: Shape {
     var phase: CGFloat
-    var direction: WaveDirection
+    var direction: SmoothWaveDirection
     
-    enum WaveDirection {
+    enum SmoothWaveDirection {
         case left, right
     }
     
@@ -207,30 +202,32 @@ struct WavePath: Shape {
         var path = Path()
         let midY = rect.midY
         let midX = rect.midX
-        let amplitude: CGFloat = 20
-        let wavelength: CGFloat = 60
-        let step: CGFloat = 2
+        
+        // Much gentler wave - single smooth curve like in Figma
+        let amplitude: CGFloat = 15 * (0.8 + phase * 0.4) // Subtle breathing
         
         if direction == .left {
-            // Wave from left to center
+            // Smooth curve from left edge to center
             path.move(to: CGPoint(x: 0, y: midY))
-            var x: CGFloat = 0
-            while x <= midX {
-                let relativeX = x / wavelength
-                let y = midY + sin((relativeX + phase) * .pi * 2) * amplitude * (x / midX)
-                path.addLine(to: CGPoint(x: x, y: y))
-                x += step
-            }
+            
+            // Use bezier curve for smooth organic wave
+            let controlY = midY - amplitude
+            path.addQuadCurve(
+                to: CGPoint(x: midX - 20, y: midY),
+                control: CGPoint(x: midX * 0.5, y: controlY)
+            )
+            path.addLine(to: CGPoint(x: midX, y: midY))
         } else {
-            // Wave from right to center
+            // Smooth curve from right edge to center
             path.move(to: CGPoint(x: rect.width, y: midY))
-            var x: CGFloat = rect.width
-            while x >= midX {
-                let relativeX = (rect.width - x) / wavelength
-                let y = midY + sin((relativeX + phase) * .pi * 2) * amplitude * ((rect.width - x) / (rect.width - midX))
-                path.addLine(to: CGPoint(x: x, y: y))
-                x -= step
-            }
+            
+            // Use bezier curve for smooth organic wave
+            let controlY = midY + amplitude
+            path.addQuadCurve(
+                to: CGPoint(x: midX + 20, y: midY),
+                control: CGPoint(x: midX + (rect.width - midX) * 0.5, y: controlY)
+            )
+            path.addLine(to: CGPoint(x: midX, y: midY))
         }
         
         return path
@@ -301,12 +298,15 @@ struct AuthView: View {
             
             // Auth section at bottom
             VStack(spacing: 16) {
-                // Email input - frosted glass style
-                TextField("", text: $email, prompt: Text("your@email.com").foregroundColor(.white.opacity(0.5)))
+                // Email input - frosted glass style with faded white placeholder
+                TextField("", text: $email, prompt: Text("your@email.com").foregroundColor(.white.opacity(0.4)))
                     .textContentType(.emailAddress)
                     .keyboardType(.emailAddress)
                     .autocapitalization(.none)
+                    .disableAutocorrection(true)
                     .foregroundColor(.white)
+                    .tint(.white) // Cursor color
+                    .accentColor(.white) // Selection color
                     .padding(.horizontal, 20)
                     .padding(.vertical, 18)
                     .background(
