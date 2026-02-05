@@ -157,41 +157,37 @@ struct ContentView: View {
 }
 
 // MARK: - Sound Wave Animation
-// Two oscillating waves meeting at center, matching Figma design
+// Smooth S-curve wave with center glow, matching Figma design
 struct SoundWaveView: View {
     @State private var phase: CGFloat = 0
     
     var body: some View {
         ZStack {
-            // Left wave - oscillating sine wave
-            OscillatingWavePath(phase: phase, direction: .left)
+            // Single smooth S-curve wave across the screen
+            SCurveWavePath(phase: phase)
                 .stroke(Color.white.opacity(0.6), lineWidth: 1.5)
             
-            // Right wave - oscillating sine wave (opposite phase)
-            OscillatingWavePath(phase: phase, direction: .right)
-                .stroke(Color.white.opacity(0.6), lineWidth: 1.5)
-            
-            // Center merge point - glowing dot
+            // Large glow circle behind center dot
             Circle()
-                .fill(Color.white)
+                .fill(Color.white.opacity(0.15))
+                .frame(width: 50, height: 50)
+                .blur(radius: 10)
+            
+            // Center merge point - small white dot
+            Circle()
+                .fill(Color.white.opacity(0.9))
                 .frame(width: 12, height: 12)
-                .shadow(color: .white.opacity(0.6), radius: 10, x: 0, y: 0)
         }
         .onAppear {
-            withAnimation(.linear(duration: 2).repeatForever(autoreverses: false)) {
+            withAnimation(.easeInOut(duration: 3).repeatForever(autoreverses: true)) {
                 phase = 1
             }
         }
     }
 }
 
-struct OscillatingWavePath: Shape {
+struct SCurveWavePath: Shape {
     var phase: CGFloat
-    var direction: WaveDirection
-    
-    enum WaveDirection {
-        case left, right
-    }
     
     var animatableData: CGFloat {
         get { phase }
@@ -202,36 +198,28 @@ struct OscillatingWavePath: Shape {
         var path = Path()
         let midY = rect.midY
         let midX = rect.midX
-        let amplitude: CGFloat = 12
-        let wavelength: CGFloat = 50
         
-        if direction == .left {
-            // Wave from left edge to center with sine oscillation
-            path.move(to: CGPoint(x: 0, y: midY))
-            var x: CGFloat = 0
-            while x <= midX {
-                let progress = x / midX // 0 to 1 as we approach center
-                let wavePhase = (x / wavelength) + (phase * 2 * .pi)
-                // Amplitude decreases as we approach center
-                let localAmplitude = amplitude * (1 - progress * 0.5)
-                let y = midY + sin(wavePhase) * localAmplitude
-                path.addLine(to: CGPoint(x: x, y: y))
-                x += 2
-            }
-        } else {
-            // Wave from right edge to center with sine oscillation (opposite direction)
-            path.move(to: CGPoint(x: rect.width, y: midY))
-            var x: CGFloat = rect.width
-            while x >= midX {
-                let progress = (rect.width - x) / (rect.width - midX) // 0 to 1 as we approach center
-                let wavePhase = ((rect.width - x) / wavelength) + (phase * 2 * .pi)
-                // Amplitude decreases as we approach center, opposite phase
-                let localAmplitude = amplitude * (1 - progress * 0.5)
-                let y = midY - sin(wavePhase) * localAmplitude // Negative for opposite oscillation
-                path.addLine(to: CGPoint(x: x, y: y))
-                x -= 2
-            }
-        }
+        // Amplitude that breathes with phase
+        let amplitude: CGFloat = 20 + (phase * 8)
+        
+        // Start from left edge at midY
+        path.move(to: CGPoint(x: 0, y: midY))
+        
+        // Left side: curve down then back up to center
+        // First control point pulls down
+        // Second control point at center
+        path.addCurve(
+            to: CGPoint(x: midX, y: midY),
+            control1: CGPoint(x: midX * 0.4, y: midY + amplitude),
+            control2: CGPoint(x: midX * 0.7, y: midY - amplitude * 0.3)
+        )
+        
+        // Right side: curve up then back down to edge
+        path.addCurve(
+            to: CGPoint(x: rect.width, y: midY),
+            control1: CGPoint(x: midX + (rect.width - midX) * 0.3, y: midY + amplitude * 0.3),
+            control2: CGPoint(x: midX + (rect.width - midX) * 0.6, y: midY - amplitude)
+        )
         
         return path
     }
