@@ -159,7 +159,7 @@ struct ContentView: View {
 // MARK: - Sound Wave Animation
 // One continuous S-curve wave that breathes, with pulsing center glow
 struct SoundWaveView: View {
-    @State private var amplitude: CGFloat = 0
+    @State private var amplitude: CGFloat = -40  // Start negative so it goes both directions
     @State private var glowScale: CGFloat = 1.0
     @State private var glowOpacity: Double = 0.3
     
@@ -181,13 +181,13 @@ struct SoundWaveView: View {
                 .frame(width: 16, height: 16)
         }
         .onAppear {
-            // Wave breathing animation (3 seconds)
-            withAnimation(.easeInOut(duration: 3.0).repeatForever(autoreverses: true)) {
+            // Wave breathing animation (2 seconds - faster, goes both directions -40 to +40)
+            withAnimation(.easeInOut(duration: 2.0).repeatForever(autoreverses: true)) {
                 amplitude = 40
             }
             
-            // Glow pulsing animation (2 seconds, offset timing)
-            withAnimation(.easeInOut(duration: 2.0).repeatForever(autoreverses: true)) {
+            // Glow pulsing animation (1.5 seconds - faster)
+            withAnimation(.easeInOut(duration: 1.5).repeatForever(autoreverses: true)) {
                 glowScale = 1.4
                 glowOpacity = 0.5
             }
