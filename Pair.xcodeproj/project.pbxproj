@@ -14,24 +14,9 @@
 		004 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = 104; };
 		005 /* APIService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 105; };
 		006 /* AuthManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 106; };
-		007 /* SearchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 107; };
-		008 /* PromptView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 108; };
-		009 /* ResultsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 109; };
-		010 /* ExploreView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 110; };
-		011 /* FeedView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 111; };
-		012 /* ProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 112; };
-		013 /* PlaylistDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 113; };
 		014 /* AudioPlayer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 114; };
-		015 /* TrackRowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 115; };
-		016 /* PlaylistRowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 116; };
 		017 /* RemixManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 118; };
 		018 /* DesignSystem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 119; };
-		019 /* SongConfirmationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 120; };
-		020 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 121; };
-		022 /* ProfileSetupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 123; };
-		023 /* TasteSelectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 124; };
-		024 /* DiscoverTastemakersView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 125; };
-		025 /* OnboardingContainerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 126; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -42,26 +27,11 @@
 		104 /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
 		105 /* APIService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIService.swift; sourceTree = "<group>"; };
 		106 /* AuthManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthManager.swift; sourceTree = "<group>"; };
-		107 /* SearchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchView.swift; sourceTree = "<group>"; };
-		108 /* PromptView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PromptView.swift; sourceTree = "<group>"; };
-		109 /* ResultsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResultsView.swift; sourceTree = "<group>"; };
-		110 /* ExploreView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExploreView.swift; sourceTree = "<group>"; };
-		111 /* FeedView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeedView.swift; sourceTree = "<group>"; };
-		112 /* ProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileView.swift; sourceTree = "<group>"; };
-		113 /* PlaylistDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaylistDetailView.swift; sourceTree = "<group>"; };
 		114 /* AudioPlayer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioPlayer.swift; sourceTree = "<group>"; };
-		115 /* TrackRowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrackRowView.swift; sourceTree = "<group>"; };
-		116 /* PlaylistRowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaylistRowView.swift; sourceTree = "<group>"; };
 		117 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		118 /* RemixManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemixManager.swift; sourceTree = "<group>"; };
 		119 /* DesignSystem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DesignSystem.swift; sourceTree = "<group>"; };
-		120 /* SongConfirmationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SongConfirmationView.swift; sourceTree = "<group>"; };
-		121 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		122 /* LaunchScreen.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = LaunchScreen.storyboard; sourceTree = "<group>"; };
-		123 /* ProfileSetupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileSetupView.swift; sourceTree = "<group>"; };
-		124 /* TasteSelectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TasteSelectionView.swift; sourceTree = "<group>"; };
-		125 /* DiscoverTastemakersView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiscoverTastemakersView.swift; sourceTree = "<group>"; };
-		126 /* OnboardingContainerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingContainerView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -130,19 +100,6 @@
 		305 /* Views */ = {
 			isa = PBXGroup;
 			children = (
-				107 /* SearchView.swift */,
-				108 /* PromptView.swift */,
-				109 /* ResultsView.swift */,
-				110 /* ExploreView.swift */,
-				111 /* FeedView.swift */,
-				112 /* ProfileView.swift */,
-				113 /* PlaylistDetailView.swift */,
-				120 /* SongConfirmationView.swift */,
-				121 /* SettingsView.swift */,
-				123 /* ProfileSetupView.swift */,
-				124 /* TasteSelectionView.swift */,
-				125 /* DiscoverTastemakersView.swift */,
-				126 /* OnboardingContainerView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -150,8 +107,6 @@
 		306 /* Components */ = {
 			isa = PBXGroup;
 			children = (
-				115 /* TrackRowView.swift */,
-				116 /* PlaylistRowView.swift */,
 			);
 			path = Components;
 			sourceTree = "<group>";
@@ -235,24 +190,9 @@
 					004 /* Models.swift in Sources */,
 					005 /* APIService.swift in Sources */,
 					006 /* AuthManager.swift in Sources */,
-					007 /* SearchView.swift in Sources */,
-					008 /* PromptView.swift in Sources */,
-					009 /* ResultsView.swift in Sources */,
-					010 /* ExploreView.swift in Sources */,
-					011 /* FeedView.swift in Sources */,
-					012 /* ProfileView.swift in Sources */,
-					013 /* PlaylistDetailView.swift in Sources */,
 					014 /* AudioPlayer.swift in Sources */,
-					015 /* TrackRowView.swift in Sources */,
-				016 /* PlaylistRowView.swift in Sources */,
-				017 /* RemixManager.swift in Sources */,
-				018 /* DesignSystem.swift in Sources */,
-			019 /* SongConfirmationView.swift in Sources */,
-				020 /* SettingsView.swift in Sources */,
-				022 /* ProfileSetupView.swift in Sources */,
-				023 /* TasteSelectionView.swift in Sources */,
-				024 /* DiscoverTastemakersView.swift in Sources */,
-				025 /* OnboardingContainerView.swift in Sources */,
+					017 /* RemixManager.swift in Sources */,
+					018 /* DesignSystem.swift in Sources */,
 				);
 				runOnlyForDeploymentPostprocessing = 0;
 			};
