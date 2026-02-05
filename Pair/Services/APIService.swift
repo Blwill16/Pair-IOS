@@ -392,6 +392,139 @@ class APIService: ObservableObject {
         
         return try JSONDecoder().decode(DiscoverResponse.self, from: data)
     }
+    
+    // MARK: - Curator Engine API
+    
+    func getWeeklyDrop(userId: String) async throws -> WeeklyDropResponse {
+        guard let url = URL(string: "\(baseURL)/api/weekly-drop") else {
+            throw APIError.invalidURL
+        }
+        
+        var request = URLRequest(url: url)
+        request.setValue(userId, forHTTPHeaderField: "x-user-id")
+        
+        let (data, response) = try await URLSession.shared.data(for: request)
+        
+        guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
+            throw APIError.requestFailed
+        }
+        
+        return try JSONDecoder().decode(WeeklyDropResponse.self, from: data)
+    }
+    
+    func generateWeeklyDrop(userId: String) async throws -> WeeklyDropResponse {
+        guard let url = URL(string: "\(baseURL)/api/weekly-drop") else {
+            throw APIError.invalidURL
+        }
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue(userId, forHTTPHeaderField: "x-user-id")
+        
+        let (data, response) = try await URLSession.shared.data(for: request)
+        
+        guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
+            throw APIError.requestFailed
+        }
+        
+        return try JSONDecoder().decode(WeeklyDropResponse.self, from: data)
+    }
+    
+    func getCuratedGenres(userId: String?) async throws -> [CuratedGenre] {
+        guard let url = URL(string: "\(baseURL)/api/genres") else {
+            throw APIError.invalidURL
+        }
+        
+        var request = URLRequest(url: url)
+        if let userId = userId {
+            request.setValue(userId, forHTTPHeaderField: "x-user-id")
+        }
+        
+        let (data, response) = try await URLSession.shared.data(for: request)
+        
+        guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
+            throw APIError.requestFailed
+        }
+        
+        let genresResponse = try JSONDecoder().decode(GenresResponse.self, from: data)
+        return genresResponse.genres
+    }
+    
+    func updateGenreWeight(userId: String, genreId: String, weight: Double?, isActive: Bool?) async throws {
+        guard let url = URL(string: "\(baseURL)/api/genres") else {
+            throw APIError.invalidURL
+        }
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "PATCH"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue(userId, forHTTPHeaderField: "x-user-id")
+        
+        var body: [String: Any] = ["genre_id": genreId]
+        if let weight = weight { body["weight"] = weight }
+        if let isActive = isActive { body["is_active"] = isActive }
+        
+        request.httpBody = try JSONSerialization.data(withJSONObject: body)
+        
+        let (_, response) = try await URLSession.shared.data(for: request)
+        
+        guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
+            throw APIError.requestFailed
+        }
+    }
+    
+    func logTrackAction(userId: String, action: String, trackId: String?, appleMusicId: String?, weeklyDropId: String?, durationMs: Int?, context: String?) async {
+        guard let url = URL(string: "\(baseURL)/api/track") else { return }
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue(userId, forHTTPHeaderField: "x-user-id")
+        
+        var body: [String: Any] = ["action": action]
+        if let trackId = trackId { body["track_id"] = trackId }
+        if let appleMusicId = appleMusicId { body["apple_music_id"] = appleMusicId }
+        if let weeklyDropId = weeklyDropId { body["weekly_drop_id"] = weeklyDropId }
+        if let durationMs = durationMs { body["duration_ms"] = durationMs }
+        if let context = context { body["context"] = context }
+        
+        request.httpBody = try? JSONSerialization.data(withJSONObject: body)
+        
+        _ = try? await URLSession.shared.data(for: request)
+    }
+    
+    func getTasteProfile(userId: String) async throws -> TasteProfile {
+        guard let url = URL(string: "\(baseURL)/api/taste") else {
+            throw APIError.invalidURL
+        }
+        
+        var request = URLRequest(url: url)
+        request.setValue(userId, forHTTPHeaderField: "x-user-id")
+        
+        let (data, response) = try await URLSession.shared.data(for: request)
+        
+        guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
+            throw APIError.requestFailed
+        }
+        
+        return try JSONDecoder().decode(TasteProfile.self, from: data)
+    }
+    
+    func refreshTaste(userId: String) async throws {
+        guard let url = URL(string: "\(baseURL)/api/taste") else {
+            throw APIError.invalidURL
+        }
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue(userId, forHTTPHeaderField: "x-user-id")
+        
+        let (_, response) = try await URLSession.shared.data(for: request)
+        
+        guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
+            throw APIError.requestFailed
+        }
+    }
 }
 
 // MARK: - Recent Pairing Data Model

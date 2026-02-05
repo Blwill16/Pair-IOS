@@ -240,3 +240,149 @@ struct PairTrack: Codable, Identifiable, Hashable {
     
     var id: String { apple_music_id }
 }
+
+// MARK: - Curator Engine Models
+
+struct CuratedGenre: Codable, Identifiable, Hashable {
+    let id: String
+    let slug: String
+    let displayName: String
+    let descriptor: String?
+    let searchKeywords: [String]?
+    let isActive: Bool?
+    let userWeight: Double?
+    let userActive: Bool?
+    
+    enum CodingKeys: String, CodingKey {
+        case id
+        case slug
+        case displayName = "display_name"
+        case descriptor
+        case searchKeywords = "search_keywords"
+        case isActive = "is_active"
+        case userWeight = "user_weight"
+        case userActive = "user_active"
+    }
+}
+
+struct WeeklyDropTrack: Codable, Identifiable, Hashable {
+    let id: String?
+    let appleMusicId: String?
+    let trackName: String?
+    let artistName: String?
+    let albumName: String?
+    let albumArtUrl: String?
+    let previewUrl: String?
+    let confidence: Double?
+    let reason: String?
+    
+    enum CodingKeys: String, CodingKey {
+        case id
+        case appleMusicId = "apple_music_id"
+        case trackName = "track_name"
+        case artistName = "artist_name"
+        case albumName = "album_name"
+        case albumArtUrl = "album_art_url"
+        case previewUrl = "preview_url"
+        case confidence
+        case reason
+    }
+}
+
+struct WeeklyDropGenre: Codable, Identifiable, Hashable {
+    let slug: String
+    let displayName: String
+    let descriptor: String?
+    let trackCount: Int
+    let tracks: [WeeklyDropTrack]
+    
+    var id: String { slug }
+    
+    enum CodingKeys: String, CodingKey {
+        case slug
+        case displayName = "display_name"
+        case descriptor
+        case trackCount = "track_count"
+        case tracks
+    }
+}
+
+struct WeeklyDropResponse: Codable {
+    let status: String
+    let weekStartDate: String?
+    let totalTracks: Int?
+    let genres: [WeeklyDropGenre]?
+    let message: String?
+    
+    enum CodingKeys: String, CodingKey {
+        case status
+        case weekStartDate = "week_start_date"
+        case totalTracks = "total_tracks"
+        case genres
+        case message
+    }
+}
+
+struct GenresResponse: Codable {
+    let genres: [CuratedGenre]
+}
+
+struct TasteProfile: Codable {
+    let tasteVector: TasteVector?
+    let genrePreferences: [GenrePreference]?
+    let stats: TasteStats?
+    
+    enum CodingKeys: String, CodingKey {
+        case tasteVector = "taste_vector"
+        case genrePreferences = "genre_preferences"
+        case stats
+    }
+}
+
+struct TasteVector: Codable {
+    let preferredEnergy: Double?
+    let preferredValence: Double?
+    let preferredDanceability: Double?
+    let preferredAcousticness: Double?
+    let preferredTempo: Double?
+    
+    enum CodingKeys: String, CodingKey {
+        case preferredEnergy = "preferred_energy"
+        case preferredValence = "preferred_valence"
+        case preferredDanceability = "preferred_danceability"
+        case preferredAcousticness = "preferred_acousticness"
+        case preferredTempo = "preferred_tempo"
+    }
+}
+
+struct GenrePreference: Codable, Identifiable {
+    let slug: String?
+    let displayName: String?
+    let weight: Double?
+    let isActive: Bool?
+    
+    var id: String { slug ?? UUID().uuidString }
+    
+    enum CodingKeys: String, CodingKey {
+        case slug
+        case displayName = "display_name"
+        case weight
+        case isActive = "is_active"
+    }
+}
+
+struct TasteStats: Codable {
+    let totalInteractions: Int?
+    let likes: Int?
+    let dislikes: Int?
+    let saves: Int?
+    let skips: Int?
+    
+    enum CodingKeys: String, CodingKey {
+        case totalInteractions = "total_interactions"
+        case likes
+        case dislikes
+        case saves
+        case skips
+    }
+}
