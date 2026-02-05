@@ -156,6 +156,82 @@ struct ContentView: View {
     }
 }
 
+// MARK: - Sound Wave Animation
+struct SoundWaveView: View {
+    @State private var phase: CGFloat = 0
+    
+    var body: some View {
+        ZStack {
+            // Left wave
+            WavePath(phase: phase, direction: .left)
+                .stroke(Color.white.opacity(0.6), lineWidth: 2)
+            
+            // Right wave
+            WavePath(phase: phase, direction: .right)
+                .stroke(Color.white.opacity(0.6), lineWidth: 2)
+            
+            // Center merge point - pulsing dot
+            Circle()
+                .fill(Color.white)
+                .frame(width: 12, height: 12)
+                .shadow(color: .white.opacity(0.5), radius: 8, x: 0, y: 0)
+            
+            // Expanding glow ring
+            Circle()
+                .stroke(Color.white.opacity(0.3), lineWidth: 1)
+                .frame(width: 24 + (phase * 10), height: 24 + (phase * 10))
+                .opacity(1 - (phase * 0.5))
+        }
+        .onAppear {
+            withAnimation(.linear(duration: 3).repeatForever(autoreverses: false)) {
+                phase = 1
+            }
+        }
+    }
+}
+
+struct WavePath: Shape {
+    var phase: CGFloat
+    var direction: WaveDirection
+    
+    enum WaveDirection {
+        case left, right
+    }
+    
+    var animatableData: CGFloat {
+        get { phase }
+        set { phase = newValue }
+    }
+    
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        let midY = rect.midY
+        let midX = rect.midX
+        let amplitude: CGFloat = 20
+        let wavelength: CGFloat = 60
+        
+        if direction == .left {
+            // Wave from left to center
+            path.move(to: CGPoint(x: 0, y: midY))
+            for x in stride(from: 0, through: midX, by: 2) {
+                let relativeX = x / wavelength
+                let y = midY + sin((relativeX + phase) * .pi * 2) * amplitude * (x / midX)
+                path.addLine(to: CGPoint(x: x, y: y))
+            }
+        } else {
+            // Wave from right to center
+            path.move(to: CGPoint(x: rect.width, y: midY))
+            for x in stride(from: rect.width, through: midX, by: -2) {
+                let relativeX = (rect.width - x) / wavelength
+                let y = midY + sin((relativeX + phase) * .pi * 2) * amplitude * ((rect.width - x) / (rect.width - midX))
+                path.addLine(to: CGPoint(x: x, y: y))
+            }
+        }
+        
+        return path
+    }
+}
+
 struct AuthView: View {
     @EnvironmentObject var authManager: AuthManager
     @State private var email = ""
@@ -163,10 +239,11 @@ struct AuthView: View {
     @State private var showOTPEntry = false
     @State private var errorMessage: String?
     @State private var isLoading = false
+    @State private var showContent = false
     
     var body: some View {
         ZStack {
-            // Solid purple background per Figma
+            // Solid purple background per Figma (#9b87f5)
             Color.pairPurple.ignoresSafeArea()
             
             if showOTPEntry {
@@ -180,24 +257,40 @@ struct AuthView: View {
         .onTapGesture {
             UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
         }
+        .onAppear {
+            // Staggered fade-in animation
+            withAnimation(.easeOut(duration: 0.6).delay(0.2)) {
+                showContent = true
+            }
+        }
     }
     
     private var emailEntryView: some View {
         VStack(spacing: 0) {
             Spacer()
             
-            // Logo and tagline
+            // Logo and tagline with staggered fade-in
             VStack(spacing: 16) {
-                Text("Pair")
-                    .font(.system(size: 42, weight: .bold))
+                Text("Pair Music")
+                    .font(.system(size: 42, weight: .semibold))
                     .foregroundColor(.white)
+                    .tracking(-1.26) // -0.03em letter spacing
                 
                 Text("Discover music that belongs\ntogether")
                     .font(.system(size: 18))
                     .foregroundColor(.white.opacity(0.8))
                     .multilineTextAlignment(.center)
             }
-            .padding(.bottom, 80)
+            .opacity(showContent ? 1 : 0)
+            .offset(y: showContent ? 0 : 20)
+            
+            Spacer()
+            
+            // Sound wave animation in center
+            SoundWaveView()
+                .frame(height: 60)
+                .padding(.horizontal, 40)
+                .opacity(showContent ? 1 : 0)
             
             Spacer()
             
@@ -216,7 +309,7 @@ struct AuthView: View {
                             .fill(Color.white.opacity(0.15))
                     )
                 
-                // Send code button
+                // Send magic link button
                 Button {
                     sendOTPCode()
                 } label: {
@@ -230,7 +323,7 @@ struct AuthView: View {
                                     .fill(Color.white.opacity(0.25))
                             )
                     } else {
-                        Text("Send code")
+                        Text("Send magic link")
                             .font(.system(size: 17, weight: .medium))
                             .foregroundColor(.white.opacity(0.9))
                             .frame(maxWidth: .infinity)
@@ -253,14 +346,17 @@ struct AuthView: View {
             }
             .padding(.horizontal, 32)
             .padding(.bottom, 24)
+            .opacity(showContent ? 1 : 0)
+            .offset(y: showContent ? 0 : 20)
             
-            // Footer - Terms and Privacy
-            Text("By continuing, you agree to Pair's Terms of Service\nand Privacy Policy")
+            // Footer - Terms and Privacy (updated to Pair Music)
+            Text("By continuing, you agree to Pair Music's Terms of Service\nand Privacy Policy")
                 .font(.system(size: 13))
                 .foregroundColor(.white.opacity(0.5))
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 32)
                 .padding(.bottom, 48)
+                .opacity(showContent ? 1 : 0)
         }
     }
     
