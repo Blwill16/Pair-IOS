@@ -327,6 +327,11 @@ struct GenresResponse: Codable {
     let genres: [CuratedGenre]
 }
 
+struct DiscoverResponse: Codable {
+    let playlists: [Playlist]?
+    let featured: [Playlist]?
+}
+
 struct TasteProfile: Codable {
     let tasteVector: TasteVector?
     let genrePreferences: [GenrePreference]?
