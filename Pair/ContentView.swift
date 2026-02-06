@@ -543,11 +543,24 @@ struct ConnectAppleMusicScreen: View {
         isConnecting = true
         
         Task {
-            let _ = await AppleMusicManager.shared.requestAuthorization()
+            #if targetEnvironment(simulator)
+            // MusicKit doesn't work on simulator - skip and continue
+            try? await Task.sleep(nanoseconds: 1_000_000_000)
             await MainActor.run {
                 isConnecting = false
                 onContinue()
             }
+            #else
+            do {
+                let _ = await AppleMusicManager.shared.requestAuthorization()
+            } catch {
+                print("Apple Music authorization error: \(error)")
+            }
+            await MainActor.run {
+                isConnecting = false
+                onContinue()
+            }
+            #endif
         }
     }
 }
