@@ -1,5 +1,6 @@
 import SwiftUI
 import AuthenticationServices
+import MusicKit
 
 // MARK: - Main Content View
 struct ContentView: View {
@@ -934,14 +935,15 @@ struct CuratedHomeScreen: View {
                 if isLoading {
                     VStack {
                         Spacer().frame(height: 100)
-                        ProgressView()
+                        WaveformLoadingView()
                         Spacer()
                     }
                     .frame(maxWidth: .infinity)
                 } else {
                     LazyVStack(alignment: .leading, spacing: 32) {
-                        ForEach(genres) { genre in
+                        ForEach(Array(genres.enumerated()), id: \.element.id) { index, genre in
                             GenreSectionView(genre: genre, onGenreTap: onGenreTap, onTrackTap: onTrackTap)
+                                .staggeredListItem(index: index, baseDelay: 0.1)
                         }
                     }
                     .padding(.top, 24)
@@ -1172,6 +1174,9 @@ struct NowPlayingScreen: View {
     @State private var isHolding = false
     @State private var holdProgress: CGFloat = 0
     @State private var showSaveSuccess = false
+    @State private var isPlaying = false
+    @State private var artworkVisible = false
+    @State private var closeButtonVisible = false
     
     private let holdDuration: Double = 1.0 // 1 second
     
@@ -1180,10 +1185,13 @@ struct NowPlayingScreen: View {
             Color.white.ignoresSafeArea()
             
             VStack(spacing: 0) {
-                // Close button at top right
+                // Close button at top right with fade-in animation
                 HStack {
                     Spacer()
-                    Button(action: { dismiss() }) {
+                    Button(action: { 
+                        stopPlayback()
+                        dismiss() 
+                    }) {
                         Image(systemName: "xmark")
                             .font(.system(size: 16, weight: .medium))
                             .foregroundColor(.black)
@@ -1193,13 +1201,15 @@ struct NowPlayingScreen: View {
                                     .fill(Color.gray.opacity(0.1))
                             )
                     }
+                    .buttonScaleAnimation(hoverScale: 1.05, pressScale: 0.95)
+                    .opacity(closeButtonVisible ? 1 : 0)
                 }
                 .padding(.horizontal, 24)
                 .padding(.top, 16)
                 
                 Spacer()
                 
-                // Album artwork
+                // Album artwork with scale and fade animation
                 AsyncImage(url: URL(string: track.artworkUrl)) { image in
                     image
                         .resizable()
@@ -1211,6 +1221,9 @@ struct NowPlayingScreen: View {
                 .frame(width: 280, height: 280)
                 .cornerRadius(16)
                 .shadow(color: .black.opacity(0.2), radius: 20, y: 10)
+                .scaleEffect(artworkVisible ? 1 : 0.9)
+                .opacity(artworkVisible ? 1 : 0)
+                .offset(y: artworkVisible ? 0 : 20)
                 
                 Spacer().frame(height: 40)
                 
@@ -1303,9 +1316,19 @@ struct NowPlayingScreen: View {
                 Spacer().frame(height: 60)
             }
         }
+        .onAppear {
+            startPlayback()
+            // Trigger entry animations
+            withAnimation(.easeOut(duration: 0.5)) {
+                artworkVisible = true
+            }
+            withAnimation(.easeOut(duration: 0.3).delay(0.2)) {
+                closeButtonVisible = true
+            }
+        }
     }
     
-    private func startHold() {
+    private func startHold(){
         isHolding = true
         holdProgress = 0
         
@@ -1373,6 +1396,23 @@ struct NowPlayingScreen: View {
             if let url = URL(string: "https://music.apple.com/song/\(appleMusicId)") {
                 UIApplication.shared.open(url)
             }
+        }
+    }
+    
+    private func startPlayback() {
+        guard let appleMusicId = track.appleMusicId else { return }
+        isPlaying = true
+        Task {
+            await AppleMusicManager.shared.playSong(appleMusicId: appleMusicId)
+        }
+    }
+    
+    private func stopPlayback() {
+        isPlaying = false
+        // Stop the system music player
+        Task {
+            let player = SystemMusicPlayer.shared
+            player.stop()
         }
     }
 }
@@ -1460,42 +1500,6 @@ struct ProfileScreen: View {
                         .padding(.top, 8)
                     }
                     .padding(20)
-                    .background(
-                        RoundedRectangle(cornerRadius: 16)
-                            .stroke(Color.gray.opacity(0.2), lineWidth: 1)
-                    )
-                }
-                
-                VStack(alignment: .leading, spacing: 16) {
-                    Text("LIBRARY")
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundColor(.gray)
-                        .tracking(1)
-                    
-                    HStack(alignment: .top) {
-                        Rectangle()
-                            .fill(Color.pairPurple.opacity(0.3))
-                            .frame(width: 4)
-                            .cornerRadius(2)
-                        
-                        VStack(alignment: .leading, spacing: 4) {
-                            HStack(alignment: .firstTextBaseline, spacing: 8) {
-                                Text("47")
-                                    .font(.system(size: 32, weight: .bold))
-                                    .foregroundColor(.black)
-                                
-                                Text("tracks saved")
-                                    .font(.system(size: 16))
-                                    .foregroundColor(.gray)
-                            }
-                            
-                            Text("Since Feb 2026")
-                                .font(.system(size: 14))
-                                .foregroundColor(.gray.opacity(0.6))
-                        }
-                    }
-                    .padding(20)
-                    .frame(maxWidth: .infinity, alignment: .leading)
                     .background(
                         RoundedRectangle(cornerRadius: 16)
                             .stroke(Color.gray.opacity(0.2), lineWidth: 1)
