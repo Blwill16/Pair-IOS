@@ -244,9 +244,18 @@ class AppleMusicManager: ObservableObject {
     
     // MARK: - Playback
     
+    /// Stop any currently playing music
+    func stopPlayback() {
+        let player = SystemMusicPlayer.shared
+        player.stop()
+    }
+    
     /// Play a song using the system music player
     func playSong(appleMusicId: String) async {
         guard isAuthorized else { return }
+        
+        // Stop any existing playback first
+        stopPlayback()
         
         do {
             let request = MusicCatalogResourceRequest<Song>(matching: \.id, equalTo: MusicItemID(appleMusicId))

@@ -931,7 +931,6 @@ struct MainAppView: View {
                     showNowPlaying = lastTrack
                 }
             })
-                .padding(.bottom, 20)
         }
         .sheet(item: $showGenreDetail) { genre in
             GenreDetailScreen(genre: genre, onTrackTap: { track in
@@ -1706,6 +1705,10 @@ struct NowPlayingScreen: View {
             }
             // Store as last played track
             LastPlayedTrackManager.shared.lastTrack = track
+        }
+        .onDisappear {
+            // Stop playback when the screen is dismissed
+            stopPlayback()
         }
     }
     

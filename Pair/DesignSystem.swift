@@ -295,54 +295,50 @@ struct FloatingNavBar: View {
     
     var body: some View {
         HStack(spacing: 0) {
-            // List/Curated (left - list icon with circle when selected)
+            // List/Curated (left)
             Button {
                 selectedTab = 0
             } label: {
-                ZStack {
-                    if selectedTab == 0 {
-                        Circle()
-                            .fill(Color(hex: "f0f0f0"))
-                            .frame(width: 44, height: 44)
-                    }
-                    
+                VStack(spacing: 4) {
                     Image(systemName: "line.3.horizontal")
-                        .font(.system(size: 18, weight: .medium))
+                        .font(.system(size: 20, weight: .medium))
                         .foregroundColor(selectedTab == 0 ? .black : .pairTextTertiary)
                 }
-                .frame(width: 44, height: 44)
+                .frame(maxWidth: .infinity)
+                .frame(height: 50)
             }
-            
-            Spacer()
             
             // Waveform/Equalizer (center) - opens last played track
             Button {
                 onCenterTap?()
             } label: {
-                Image(systemName: "waveform")
-                    .font(.system(size: 22, weight: .medium))
-                    .foregroundColor(.pairTextTertiary)
-                    .frame(width: 44, height: 44)
+                VStack(spacing: 4) {
+                    Image(systemName: "waveform")
+                        .font(.system(size: 22, weight: .medium))
+                        .foregroundColor(.pairTextTertiary)
+                }
+                .frame(maxWidth: .infinity)
+                .frame(height: 50)
             }
             
-            Spacer()
-            
-            // Profile (right - person outline)
+            // Profile (right)
             Button {
                 selectedTab = 2
             } label: {
-                Image(systemName: "person")
-                    .font(.system(size: 20, weight: .medium))
-                    .foregroundColor(selectedTab == 2 ? .black : .pairTextTertiary)
-                    .frame(width: 44, height: 44)
+                VStack(spacing: 4) {
+                    Image(systemName: "person")
+                        .font(.system(size: 20, weight: .medium))
+                        .foregroundColor(selectedTab == 2 ? .black : .pairTextTertiary)
+                }
+                .frame(maxWidth: .infinity)
+                .frame(height: 50)
             }
         }
-        .padding(.horizontal, 24)
-        .padding(.vertical, 8)
+        .padding(.horizontal, 16)
+        .padding(.bottom, 8)
         .background(
-            Capsule()
-                .fill(Color.white)
-                .shadow(color: Color.black.opacity(0.12), radius: 16, y: 4)
+            Color.white
+                .shadow(color: Color.black.opacity(0.08), radius: 8, y: -2)
         )
     }
 }
