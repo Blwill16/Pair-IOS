@@ -291,6 +291,7 @@ struct GlassTextFieldStyle: TextFieldStyle {
 // MARK: - Floating Navigation Bar
 struct FloatingNavBar: View {
     @Binding var selectedTab: Int
+    var onCenterTap: (() -> Void)? = nil
     
     var body: some View {
         HStack(spacing: 0) {
@@ -314,13 +315,13 @@ struct FloatingNavBar: View {
             
             Spacer()
             
-            // Waveform/Equalizer (center)
+            // Waveform/Equalizer (center) - opens last played track
             Button {
-                selectedTab = 1
+                onCenterTap?()
             } label: {
                 Image(systemName: "waveform")
                     .font(.system(size: 22, weight: .medium))
-                    .foregroundColor(selectedTab == 1 ? .black : .pairTextTertiary)
+                    .foregroundColor(.pairTextTertiary)
                     .frame(width: 44, height: 44)
             }
             

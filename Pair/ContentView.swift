@@ -804,11 +804,20 @@ struct WelcomeScreen: View {
     }
 }
 
+// MARK: - Last Played Track Manager
+class LastPlayedTrackManager: ObservableObject {
+    static let shared = LastPlayedTrackManager()
+    @Published var lastTrack: TrackData?
+    
+    private init() {}
+}
+
 // MARK: - Main App View (Screens 9-16)
 struct MainAppView: View {
     @Binding var selectedTab: Int
     @State private var showGenreDetail: GenreData?
     @State private var showNowPlaying: TrackData?
+    @StateObject private var lastPlayedManager = LastPlayedTrackManager.shared
     
     var body: some View {
         ZStack(alignment: .bottom) {
@@ -829,7 +838,12 @@ struct MainAppView: View {
             }
             .tabViewStyle(.page(indexDisplayMode: .never))
             
-            FloatingNavBar(selectedTab: $selectedTab)
+            FloatingNavBar(selectedTab: $selectedTab, onCenterTap: {
+                // Open last played track when center (waveform) button is tapped
+                if let lastTrack = lastPlayedManager.lastTrack {
+                    showNowPlaying = lastTrack
+                }
+            })
                 .padding(.bottom, 20)
         }
         .sheet(item: $showGenreDetail) { genre in
@@ -867,6 +881,54 @@ struct TrackData: Identifiable {
     var appleMusicUrl: String?
 }
 
+// MARK: - Weekly Date Helper
+struct WeeklyDateHelper {
+    // Get the current week's date range based on New York timezone
+    // Week starts on Thursday (when new music drops)
+    static func getCurrentWeekRange() -> (start: Date, end: Date, displayString: String) {
+        let nyTimeZone = TimeZone(identifier: "America/New_York")!
+        var calendar = Calendar.current
+        calendar.timeZone = nyTimeZone
+        
+        let now = Date()
+        let weekday = calendar.component(.weekday, from: now)
+        
+        // Find the most recent Thursday (weekday 5)
+        // If today is Thursday, use today as start
+        var daysToSubtract = (weekday - 5 + 7) % 7
+        if daysToSubtract == 0 && calendar.component(.hour, from: now) < 0 {
+            // If it's Thursday but before midnight, use last Thursday
+            daysToSubtract = 7
+        }
+        
+        let startOfWeek = calendar.date(byAdding: .day, value: -daysToSubtract, to: now)!
+        let endOfWeek = calendar.date(byAdding: .day, value: 6, to: startOfWeek)!
+        
+        let formatter = DateFormatter()
+        formatter.dateFormat = "MM/dd"
+        formatter.timeZone = nyTimeZone
+        
+        let startStr = formatter.string(from: startOfWeek)
+        let endStr = formatter.string(from: endOfWeek)
+        
+        return (startOfWeek, endOfWeek, "\(startStr) - \(endStr)")
+    }
+    
+    // Check if it's time to refresh (Thursday midnight in New York)
+    static func shouldRefreshContent() -> Bool {
+        let nyTimeZone = TimeZone(identifier: "America/New_York")!
+        var calendar = Calendar.current
+        calendar.timeZone = nyTimeZone
+        
+        let now = Date()
+        let weekday = calendar.component(.weekday, from: now)
+        let hour = calendar.component(.hour, from: now)
+        
+        // Thursday is weekday 5, check if it's around midnight (0-1 hour)
+        return weekday == 5 && hour == 0
+    }
+}
+
 // MARK: - Screen 9: Curated Genres (Home)
 struct CuratedHomeScreen: View {
     let onGenreTap: (GenreData) -> Void
@@ -874,16 +936,17 @@ struct CuratedHomeScreen: View {
     
     @State private var genres: [GenreData] = []
     @State private var isLoading = true
+    @State private var weekDateRange: String = ""
     
     var body: some View {
         ScrollView(showsIndicators: false) {
             VStack(alignment: .leading, spacing: 0) {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Week of Feb 6")
+                    Text("New Music")
                         .font(.system(size: 14))
                         .foregroundColor(.gray)
                     
-                    Text("This Week")
+                    Text(weekDateRange)
                         .font(.system(size: 32, weight: .bold))
                         .foregroundColor(.black)
                     
@@ -929,6 +992,10 @@ struct CuratedHomeScreen: View {
     
     private func loadGenres() {
         isLoading = true
+        
+        // Set the week date range
+        let weekRange = WeeklyDateHelper.getCurrentWeekRange()
+        weekDateRange = weekRange.displayString
         
         Task {
             // Try to get recently played first, then fall back to library
@@ -1187,6 +1254,10 @@ struct NowPlayingScreen: View {
     @State private var isPlaying = false
     @State private var artworkVisible = false
     @State private var closeButtonVisible = false
+    @State private var playbackProgress: Double = 0
+    @State private var currentTime: TimeInterval = 0
+    @State private var duration: TimeInterval = 180 // Default 3 min, will be updated
+    @State private var isScrubbing = false
     
     private let holdDuration: Double = 1.0 // 1 second
     
@@ -1235,13 +1306,14 @@ struct NowPlayingScreen: View {
                 .opacity(artworkVisible ? 1 : 0)
                 .offset(y: artworkVisible ? 0 : 20)
                 
-                Spacer().frame(height: 40)
+                Spacer().frame(height: 32)
                 
                 // Track info
                 VStack(spacing: 8) {
                     Text(track.title)
                         .font(.system(size: 24, weight: .bold))
                         .foregroundColor(.black)
+                        .lineLimit(1)
                     
                     Text(track.artist)
                         .font(.system(size: 16))
@@ -1253,49 +1325,124 @@ struct NowPlayingScreen: View {
                             .foregroundColor(.gray)
                     }
                 }
+                .padding(.horizontal, 24)
                 
-                Spacer()
+                Spacer().frame(height: 24)
                 
-                // Action buttons: Skip | Hold-to-Save | Open in Apple Music
-                HStack(spacing: 40) {
-                    // Left button: Skip/Decline
-                    Button(action: { dismiss() }) {
-                        Image(systemName: "forward.end")
-                            .font(.system(size: 22))
+                // Progress bar / Scrubber
+                VStack(spacing: 8) {
+                    GeometryReader { geometry in
+                        ZStack(alignment: .leading) {
+                            // Background track
+                            RoundedRectangle(cornerRadius: 2)
+                                .fill(Color.gray.opacity(0.2))
+                                .frame(height: 4)
+                            
+                            // Progress fill
+                            RoundedRectangle(cornerRadius: 2)
+                                .fill(Color.pairPurple)
+                                .frame(width: geometry.size.width * CGFloat(playbackProgress), height: 4)
+                            
+                            // Scrubber knob (visible when scrubbing)
+                            Circle()
+                                .fill(Color.pairPurple)
+                                .frame(width: isScrubbing ? 16 : 8, height: isScrubbing ? 16 : 8)
+                                .offset(x: geometry.size.width * CGFloat(playbackProgress) - (isScrubbing ? 8 : 4))
+                                .animation(.easeOut(duration: 0.1), value: isScrubbing)
+                        }
+                        .gesture(
+                            DragGesture(minimumDistance: 0)
+                                .onChanged { value in
+                                    isScrubbing = true
+                                    let progress = max(0, min(1, value.location.x / geometry.size.width))
+                                    playbackProgress = Double(progress)
+                                    currentTime = duration * Double(progress)
+                                }
+                                .onEnded { value in
+                                    isScrubbing = false
+                                    let progress = max(0, min(1, value.location.x / geometry.size.width))
+                                    seekTo(progress: progress)
+                                }
+                        )
+                    }
+                    .frame(height: 20)
+                    
+                    // Time labels
+                    HStack {
+                        Text(formatTime(currentTime))
+                            .font(.system(size: 12, design: .monospaced))
+                            .foregroundColor(.gray)
+                        Spacer()
+                        Text(formatTime(duration))
+                            .font(.system(size: 12, design: .monospaced))
+                            .foregroundColor(.gray)
+                    }
+                }
+                .padding(.horizontal, 40)
+                
+                Spacer().frame(height: 24)
+                
+                // Playback controls: Previous | Play/Pause | Next
+                HStack(spacing: 48) {
+                    // Previous/Rewind
+                    Button(action: { seekTo(progress: 0) }) {
+                        Image(systemName: "backward.fill")
+                            .font(.system(size: 24))
                             .foregroundColor(.black)
-                            .frame(width: 56, height: 56)
-                            .background(
-                                Circle()
-                                    .fill(Color.gray.opacity(0.1))
-                            )
                     }
                     
-                    // Center button: Hold-to-Save with progress ring
+                    // Play/Pause
+                    Button(action: togglePlayback) {
+                        ZStack {
+                            Circle()
+                                .fill(Color.black)
+                                .frame(width: 64, height: 64)
+                            
+                            Image(systemName: isPlaying ? "pause.fill" : "play.fill")
+                                .font(.system(size: 24))
+                                .foregroundColor(.white)
+                                .offset(x: isPlaying ? 0 : 2)
+                        }
+                    }
+                    
+                    // Next/Skip
+                    Button(action: { dismiss() }) {
+                        Image(systemName: "forward.fill")
+                            .font(.system(size: 24))
+                            .foregroundColor(.black)
+                    }
+                }
+                
+                Spacer().frame(height: 32)
+                
+                // Action buttons: Hold-to-Save | Open in Apple Music
+                HStack(spacing: 32) {
+                    // Hold-to-Save with progress ring
                     ZStack {
                         // Background circle
                         Circle()
                             .fill(Color.pairPurple)
-                            .frame(width: 72, height: 72)
+                            .frame(width: 56, height: 56)
                             .scaleEffect(isHolding ? 0.95 : (showSaveSuccess ? 1.05 : 1.0))
                             .animation(.easeInOut(duration: 0.1), value: isHolding)
                             .animation(.easeInOut(duration: 0.2), value: showSaveSuccess)
                         
                         // Progress ring track (background)
                         Circle()
-                            .stroke(Color.white.opacity(0.3), lineWidth: 3)
-                            .frame(width: 66, height: 66)
+                            .stroke(Color.white.opacity(0.3), lineWidth: 2)
+                            .frame(width: 50, height: 50)
                         
                         // Progress ring (animated)
                         Circle()
                             .trim(from: 0, to: holdProgress)
-                            .stroke(Color.white, style: StrokeStyle(lineWidth: 3, lineCap: .round))
-                            .frame(width: 66, height: 66)
+                            .stroke(Color.white, style: StrokeStyle(lineWidth: 2, lineCap: .round))
+                            .frame(width: 50, height: 50)
                             .rotationEffect(.degrees(-90))
                             .animation(.linear(duration: 0.016), value: holdProgress)
                         
                         // Heart icon
                         Image(systemName: isSaved ? "heart.fill" : "heart")
-                            .font(.system(size: 28))
+                            .font(.system(size: 22))
                             .foregroundColor(.white)
                     }
                     .gesture(
@@ -1310,30 +1457,100 @@ struct NowPlayingScreen: View {
                             }
                     )
                     
-                    // Right button: Open in Apple Music
+                    // Open in Apple Music
                     Button(action: openInAppleMusic) {
-                        Image(systemName: "arrow.up.right")
-                            .font(.system(size: 20, weight: .medium))
-                            .foregroundColor(.black)
-                            .frame(width: 56, height: 56)
-                            .background(
-                                Circle()
-                                    .stroke(Color.gray.opacity(0.3), lineWidth: 1)
-                            )
+                        ZStack {
+                            Circle()
+                                .stroke(Color.gray.opacity(0.3), lineWidth: 1)
+                                .frame(width: 56, height: 56)
+                            
+                            Image(systemName: "arrow.up.right")
+                                .font(.system(size: 18, weight: .medium))
+                                .foregroundColor(.black)
+                        }
                     }
                 }
                 
-                Spacer().frame(height: 60)
+                Spacer().frame(height: 40)
             }
         }
         .onAppear {
             startPlayback()
+            startPlaybackTimer()
             // Trigger entry animations
             withAnimation(.easeOut(duration: 0.5)) {
                 artworkVisible = true
             }
             withAnimation(.easeOut(duration: 0.3).delay(0.2)) {
                 closeButtonVisible = true
+            }
+            // Store as last played track
+            LastPlayedTrackManager.shared.lastTrack = track
+        }
+    }
+    
+    private func formatTime(_ time: TimeInterval) -> String {
+        let minutes = Int(time) / 60
+        let seconds = Int(time) % 60
+        return String(format: "%d:%02d", minutes, seconds)
+    }
+    
+    private func togglePlayback() {
+        if isPlaying {
+            pausePlayback()
+        } else {
+            resumePlayback()
+        }
+    }
+    
+    private func pausePlayback() {
+        isPlaying = false
+        Task {
+            let player = SystemMusicPlayer.shared
+            player.pause()
+        }
+    }
+    
+    private func resumePlayback() {
+        isPlaying = true
+        Task {
+            let player = SystemMusicPlayer.shared
+            try? await player.play()
+        }
+    }
+    
+    private func seekTo(progress: Double) {
+        let targetTime = duration * progress
+        currentTime = targetTime
+        playbackProgress = progress
+        
+        Task {
+            let player = SystemMusicPlayer.shared
+            player.playbackTime = targetTime
+        }
+    }
+    
+    private func startPlaybackTimer() {
+        Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { timer in
+            if !isScrubbing {
+                let player = SystemMusicPlayer.shared
+                currentTime = player.playbackTime
+                
+                // Get duration from current entry if available
+                if let entry = player.queue.currentEntry {
+                    if case .song(let song) = entry.item {
+                        if let songDuration = song.duration {
+                            duration = songDuration
+                        }
+                    }
+                }
+                
+                if duration > 0 {
+                    playbackProgress = currentTime / duration
+                }
+                
+                // Update playing state based on player state
+                isPlaying = player.state.playbackStatus == .playing
             }
         }
     }
