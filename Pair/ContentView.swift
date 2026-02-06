@@ -829,7 +829,8 @@ struct MainAppView: View {
             }
             .tabViewStyle(.page(indexDisplayMode: .never))
             
-            PairBottomNav(selectedTab: $selectedTab)
+            FloatingNavBar(selectedTab: $selectedTab)
+                .padding(.bottom, 20)
         }
         .sheet(item: $showGenreDetail) { genre in
             GenreDetailScreen(genre: genre, onTrackTap: { track in
@@ -845,42 +846,7 @@ struct MainAppView: View {
     }
 }
 
-// MARK: - Bottom Navigation
-struct PairBottomNav: View {
-    @Binding var selectedTab: Int
-    
-    var body: some View {
-        HStack {
-            Button(action: { selectedTab = 0 }) {
-                Text("Curated")
-                    .font(.system(size: 14, weight: selectedTab == 0 ? .semibold : .regular))
-                    .foregroundColor(selectedTab == 0 ? .pairPurple : .gray)
-            }
-            .frame(maxWidth: .infinity)
-            
-            Button(action: { selectedTab = 1 }) {
-                Image(systemName: "waveform")
-                    .font(.system(size: 22))
-                    .foregroundColor(selectedTab == 1 ? .pairPurple : .gray)
-            }
-            .frame(maxWidth: .infinity)
-            
-            Button(action: { selectedTab = 2 }) {
-                Image(systemName: "person")
-                    .font(.system(size: 20))
-                    .foregroundColor(selectedTab == 2 ? .pairPurple : .gray)
-            }
-            .frame(maxWidth: .infinity)
-        }
-        .padding(.vertical, 16)
-        .padding(.bottom, 20)
-        .background(
-            Rectangle()
-                .fill(Color.white)
-                .shadow(color: .black.opacity(0.08), radius: 12, y: -4)
-        )
-    }
-}
+// MARK: - Bottom Navigation (uses FloatingNavBar from DesignSystem)
 
 // MARK: - Data Models
 struct GenreData: Identifiable {
@@ -965,61 +931,54 @@ struct CuratedHomeScreen: View {
         isLoading = true
         
         Task {
-            // Search Apple Music for real tracks in each genre
-            let genreSearches: [(name: String, descriptor: String, summary: String, queries: [String])] = [
-                (
-                    name: "Melodic Electronic",
-                    descriptor: "Atmospheric - emotional - long-form",
-                    summary: "This week leaned melodic but restrained - fewer releases, higher conviction.",
-                    queries: ["Olafur Arnalds", "Nils Frahm", "Kiasmos", "Jon Hopkins"]
-                ),
-                (
-                    name: "Indie Dance",
-                    descriptor: "Groove-forward - restrained",
-                    summary: "A quieter week for indie dance - only the essentials made the cut.",
-                    queries: ["M83 Midnight City", "Eric Prydz Opus"]
-                ),
-                (
-                    name: "Dream Pop",
-                    descriptor: "Soft focus - textural",
-                    summary: "Hazy, atmospheric releases dominated this week's dream pop selections.",
-                    queries: ["Beach House Space Song", "Chromatics Cherry", "Beach House Myth"]
-                ),
-                (
-                    name: "Alt R&B",
-                    descriptor: "Intimate - boundary-pushing",
-                    summary: "Experimental R&B with emotional depth and production innovation.",
-                    queries: ["Frank Ocean Thinkin Bout You", "The Weeknd Blinding Lights", "Frank Ocean Pink White"]
-                )
-            ]
+            // Get songs from user's Apple Music library
+            let librarySongs = await AppleMusicManager.shared.getLibrarySongs(limit: 200)
             
+            // Group songs by genre
+            var genreGroups: [String: [(song: MusicKit.Song, genre: String)]] = [:]
+            
+            for song in librarySongs {
+                // Get the primary genre from the song
+                let genreName = song.genreNames.first ?? "Other"
+                
+                if genreGroups[genreName] == nil {
+                    genreGroups[genreName] = []
+                }
+                genreGroups[genreName]?.append((song: song, genre: genreName))
+            }
+            
+            // Convert to GenreData, limiting to top genres with most tracks
             var loadedGenres: [GenreData] = []
             
-            for genreInfo in genreSearches {
+            // Sort genres by track count and take top ones
+            let sortedGenres = genreGroups.sorted { $0.value.count > $1.value.count }
+            
+            for (genreName, songsInGenre) in sortedGenres.prefix(6) {
                 var tracks: [TrackData] = []
                 
-                for query in genreInfo.queries {
-                    let songs = await AppleMusicManager.shared.searchCatalog(query: query, limit: 1)
-                    if let song = songs.first {
-                        let artworkUrl = song.artwork?.url(width: 400, height: 400)?.absoluteString ?? ""
-                        let appleMusicUrl = song.url?.absoluteString
-                        
-                        tracks.append(TrackData(
-                            title: song.title,
-                            artist: song.artistName,
-                            artworkUrl: artworkUrl,
-                            genreName: genreInfo.name,
-                            appleMusicId: song.id.rawValue,
-                            appleMusicUrl: appleMusicUrl
-                        ))
-                    }
+                // Take up to 5 tracks per genre
+                for (song, _) in songsInGenre.prefix(5) {
+                    let artworkUrl = song.artwork?.url(width: 400, height: 400)?.absoluteString ?? ""
+                    let appleMusicUrl = song.url?.absoluteString
+                    
+                    tracks.append(TrackData(
+                        title: song.title,
+                        artist: song.artistName,
+                        artworkUrl: artworkUrl,
+                        genreName: genreName,
+                        appleMusicId: song.id.rawValue,
+                        appleMusicUrl: appleMusicUrl
+                    ))
                 }
                 
                 if !tracks.isEmpty {
+                    let descriptor = getGenreDescriptor(for: genreName)
+                    let summary = "Based on \(songsInGenre.count) tracks in your library."
+                    
                     loadedGenres.append(GenreData(
-                        name: genreInfo.name,
-                        descriptor: genreInfo.descriptor,
-                        editorialSummary: genreInfo.summary,
+                        name: genreName,
+                        descriptor: descriptor,
+                        editorialSummary: summary,
                         tracks: tracks
                     ))
                 }
@@ -1030,6 +989,28 @@ struct CuratedHomeScreen: View {
                 isLoading = false
             }
         }
+    }
+    
+    private func getGenreDescriptor(for genre: String) -> String {
+        let descriptors: [String: String] = [
+            "Pop": "Catchy - melodic - accessible",
+            "Hip-Hop/Rap": "Rhythmic - lyrical - bass-heavy",
+            "R&B/Soul": "Smooth - emotional - groove-driven",
+            "Rock": "Guitar-driven - energetic - raw",
+            "Electronic": "Synthesized - atmospheric - danceable",
+            "Alternative": "Experimental - indie - boundary-pushing",
+            "Dance": "High-energy - club-ready - rhythmic",
+            "Country": "Storytelling - acoustic - heartfelt",
+            "Jazz": "Improvisational - sophisticated - timeless",
+            "Classical": "Orchestral - composed - refined",
+            "Indie": "Independent - authentic - creative",
+            "Metal": "Heavy - intense - powerful",
+            "Folk": "Acoustic - traditional - narrative",
+            "Reggae": "Laid-back - rhythmic - island vibes",
+            "Latin": "Passionate - rhythmic - vibrant",
+            "Blues": "Soulful - expressive - roots-based"
+        ]
+        return descriptors[genre] ?? "Curated from your library"
     }
 }
 
