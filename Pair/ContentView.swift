@@ -831,6 +831,7 @@ struct AdjustTasteScreen: View {
 
 struct AdjustableGenreCard: View {
     @Binding var genre: TasteGenre
+    var onRemove: (() -> Void)? = nil
     
     var body: some View {
         HStack {
@@ -846,7 +847,13 @@ struct AdjustableGenreCard: View {
             
             Spacer()
             
-            Button(action: { genre.isSelected = false }) {
+            Button(action: { 
+                if let onRemove = onRemove {
+                    onRemove()
+                } else {
+                    genre.isSelected = false 
+                }
+            }) {
                 Text("Remove")
                     .font(.system(size: 14))
                     .foregroundColor(.gray.opacity(0.6))
@@ -2055,6 +2062,27 @@ struct TasteAdjustmentScreen: View {
         TasteGenre(name: "Alt R&B", descriptor: "Intimate - boundary-pushing"),
         TasteGenre(name: "Indie Dance", descriptor: "Groove-forward - restrained")
     ]
+    @State private var showAddGenre = false
+    
+    // Available genres to add
+    let availableGenres: [(String, String)] = [
+        ("Pop", "Mainstream - catchy - accessible"),
+        ("Hip-Hop/Rap", "Rhythmic - lyrical - urban"),
+        ("Rock", "Guitar-driven - energetic - raw"),
+        ("Country", "Storytelling - acoustic - heartland"),
+        ("R&B/Soul", "Smooth - emotional - groove"),
+        ("Electronic/Dance", "Synth-driven - rhythmic - club"),
+        ("Jazz", "Improvisational - sophisticated - complex"),
+        ("Classical", "Orchestral - timeless - refined"),
+        ("Indie/Alternative", "Independent - experimental - eclectic"),
+        ("Folk/Acoustic", "Organic - intimate - storytelling"),
+        ("Metal", "Heavy - intense - powerful"),
+        ("Latin", "Rhythmic - passionate - diverse"),
+        ("K-Pop", "Polished - energetic - visual"),
+        ("Ambient", "Atmospheric - textural - meditative"),
+        ("Punk", "Raw - fast - rebellious"),
+        ("Blues", "Soulful - expressive - roots")
+    ]
     
     var body: some View {
         NavigationView {
@@ -2077,11 +2105,15 @@ struct TasteAdjustmentScreen: View {
                         
                         VStack(spacing: 12) {
                             ForEach($genres) { $genre in
-                                AdjustableGenreCard(genre: $genre)
+                                AdjustableGenreCard(genre: $genre, onRemove: {
+                                    if let index = genres.firstIndex(where: { $0.id == genre.id }) {
+                                        genres.remove(at: index)
+                                    }
+                                })
                             }
                         }
                         
-                        Button(action: {}) {
+                        Button(action: { showAddGenre = true }) {
                             Text("Add more genres")
                                 .font(.system(size: 16))
                                 .foregroundColor(.gray)
@@ -2104,6 +2136,89 @@ struct TasteAdjustmentScreen: View {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Done") { dismiss() }
                         .foregroundColor(.pairPurple)
+                }
+            }
+            .sheet(isPresented: $showAddGenre) {
+                AddGenreSheet(
+                    availableGenres: availableGenres.filter { available in
+                        !genres.contains(where: { $0.name == available.0 })
+                    },
+                    onAdd: { name, descriptor in
+                        genres.append(TasteGenre(name: name, descriptor: descriptor))
+                    }
+                )
+            }
+        }
+    }
+}
+
+// MARK: - Add Genre Sheet
+struct AddGenreSheet: View {
+    @Environment(\.dismiss) var dismiss
+    let availableGenres: [(String, String)]
+    let onAdd: (String, String) -> Void
+    @State private var searchText = ""
+    
+    var filteredGenres: [(String, String)] {
+        if searchText.isEmpty {
+            return availableGenres
+        }
+        return availableGenres.filter { $0.0.lowercased().contains(searchText.lowercased()) }
+    }
+    
+    var body: some View {
+        NavigationView {
+            VStack(spacing: 0) {
+                // Search bar
+                HStack {
+                    Image(systemName: "magnifyingglass")
+                        .foregroundColor(.gray)
+                    TextField("Search genres", text: $searchText)
+                }
+                .padding(12)
+                .background(Color.gray.opacity(0.1))
+                .cornerRadius(10)
+                .padding()
+                
+                ScrollView {
+                    LazyVStack(spacing: 8) {
+                        ForEach(filteredGenres, id: \.0) { genre in
+                            Button(action: {
+                                onAdd(genre.0, genre.1)
+                                dismiss()
+                            }) {
+                                HStack {
+                                    VStack(alignment: .leading, spacing: 4) {
+                                        Text(genre.0)
+                                            .font(.system(size: 16, weight: .medium))
+                                            .foregroundColor(.black)
+                                        Text(genre.1)
+                                            .font(.system(size: 13))
+                                            .foregroundColor(.gray)
+                                    }
+                                    Spacer()
+                                    Image(systemName: "plus.circle")
+                                        .foregroundColor(.pairPurple)
+                                        .font(.system(size: 20))
+                                }
+                                .padding(16)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 12)
+                                        .fill(Color.white)
+                                        .shadow(color: Color.black.opacity(0.05), radius: 4, y: 2)
+                                )
+                            }
+                        }
+                    }
+                    .padding(.horizontal)
+                }
+            }
+            .navigationTitle("Add Genre")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("Cancel") { dismiss() }
+                        .foregroundColor(.gray)
                 }
             }
         }
