@@ -335,10 +335,10 @@ struct FloatingNavBar: View {
             }
         }
         .padding(.horizontal, 16)
-        .padding(.bottom, 8)
         .background(
             Color.white
                 .shadow(color: Color.black.opacity(0.08), radius: 8, y: -2)
+                .ignoresSafeArea(edges: .bottom)
         )
     }
 }

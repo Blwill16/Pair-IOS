@@ -1,6 +1,7 @@
 import SwiftUI
 import AuthenticationServices
 import MusicKit
+import AVFoundation
 
 // MARK: - Main Content View
 struct ContentView: View {
@@ -899,6 +900,101 @@ class LastPlayedTrackManager: ObservableObject {
     private init() {}
 }
 
+// MARK: - Preview Player (plays 30-second previews in-app)
+class PreviewPlayer: ObservableObject {
+    static let shared = PreviewPlayer()
+    
+    private var player: AVPlayer?
+    private var timeObserver: Any?
+    
+    @Published var isPlaying = false
+    @Published var currentTime: TimeInterval = 0
+    @Published var duration: TimeInterval = 30 // Preview is typically 30 seconds
+    
+    private init() {
+        // Configure audio session for playback
+        do {
+            try AVAudioSession.sharedInstance().setCategory(.playback, mode: .default)
+            try AVAudioSession.sharedInstance().setActive(true)
+        } catch {
+            print("Failed to configure audio session: \(error)")
+        }
+    }
+    
+    func play(previewUrl: String) {
+        // Stop any existing playback
+        stop()
+        
+        guard let url = URL(string: previewUrl) else {
+            print("Invalid preview URL: \(previewUrl)")
+            return
+        }
+        
+        let playerItem = AVPlayerItem(url: url)
+        player = AVPlayer(playerItem: playerItem)
+        
+        // Observe playback time
+        timeObserver = player?.addPeriodicTimeObserver(
+            forInterval: CMTime(seconds: 0.5, preferredTimescale: 600),
+            queue: .main
+        ) { [weak self] time in
+            self?.currentTime = time.seconds
+            if let duration = self?.player?.currentItem?.duration.seconds, duration.isFinite {
+                self?.duration = duration
+            }
+        }
+        
+        // Observe when playback ends
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(playerDidFinishPlaying),
+            name: .AVPlayerItemDidPlayToEndTime,
+            object: playerItem
+        )
+        
+        player?.play()
+        isPlaying = true
+    }
+    
+    @objc private func playerDidFinishPlaying() {
+        isPlaying = false
+        currentTime = 0
+    }
+    
+    func pause() {
+        player?.pause()
+        isPlaying = false
+    }
+    
+    func resume() {
+        player?.play()
+        isPlaying = true
+    }
+    
+    func stop() {
+        if let observer = timeObserver {
+            player?.removeTimeObserver(observer)
+            timeObserver = nil
+        }
+        player?.pause()
+        player = nil
+        isPlaying = false
+        currentTime = 0
+        NotificationCenter.default.removeObserver(self, name: .AVPlayerItemDidPlayToEndTime, object: nil)
+    }
+    
+    func seek(to progress: Double) {
+        let targetTime = CMTime(seconds: duration * progress, preferredTimescale: 600)
+        player?.seek(to: targetTime)
+        currentTime = duration * progress
+    }
+    
+    var progress: Double {
+        guard duration > 0 else { return 0 }
+        return currentTime / duration
+    }
+}
+
 // MARK: - Main App View (Screens 9-16)
 struct MainAppView: View {
     @Binding var selectedTab: Int
@@ -965,6 +1061,7 @@ struct TrackData: Identifiable {
     var genreName: String?
     var appleMusicId: String?
     var appleMusicUrl: String?
+    var previewUrl: String?
 }
 
 // MARK: - Weekly Date Helper
@@ -1152,7 +1249,8 @@ struct CuratedHomeScreen: View {
                                 artworkUrl: track.albumArtUrl ?? "",
                                 genreName: apiGenre.displayName,
                                 appleMusicId: track.appleMusicId ?? "",
-                                appleMusicUrl: nil  // Will be constructed from ID if needed
+                                appleMusicUrl: nil,  // Will be constructed from ID if needed
+                                previewUrl: track.previewUrl
                             ))
                         }
                         
@@ -1706,10 +1804,6 @@ struct NowPlayingScreen: View {
             // Store as last played track
             LastPlayedTrackManager.shared.lastTrack = track
         }
-        .onDisappear {
-            // Stop playback when the screen is dismissed
-            stopPlayback()
-        }
     }
     
     private func formatTime(_ time: TimeInterval) -> String {
@@ -1728,52 +1822,34 @@ struct NowPlayingScreen: View {
     
     private func pausePlayback() {
         isPlaying = false
-        Task {
-            let player = SystemMusicPlayer.shared
-            player.pause()
-        }
+        PreviewPlayer.shared.pause()
     }
     
     private func resumePlayback() {
         isPlaying = true
-        Task {
-            let player = SystemMusicPlayer.shared
-            try? await player.play()
-        }
+        PreviewPlayer.shared.resume()
     }
     
     private func seekTo(progress: Double) {
         let targetTime = duration * progress
         currentTime = targetTime
         playbackProgress = progress
-        
-        Task {
-            let player = SystemMusicPlayer.shared
-            player.playbackTime = targetTime
-        }
+        PreviewPlayer.shared.seek(to: progress)
     }
     
     private func startPlaybackTimer() {
         Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { timer in
             if !isScrubbing {
-                let player = SystemMusicPlayer.shared
-                currentTime = player.playbackTime
-                
-                // Get duration from current entry if available
-                if let entry = player.queue.currentEntry {
-                    if case .song(let song) = entry.item {
-                        if let songDuration = song.duration {
-                            duration = songDuration
-                        }
-                    }
-                }
+                let player = PreviewPlayer.shared
+                currentTime = player.currentTime
+                duration = player.duration
                 
                 if duration > 0 {
                     playbackProgress = currentTime / duration
                 }
                 
                 // Update playing state based on player state
-                isPlaying = player.state.playbackStatus == .playing
+                isPlaying = player.isPlaying
             }
         }
     }
@@ -1850,20 +1926,22 @@ struct NowPlayingScreen: View {
     }
     
     private func startPlayback() {
-        guard let appleMusicId = track.appleMusicId else { return }
-        isPlaying = true
-        Task {
-            await AppleMusicManager.shared.playSong(appleMusicId: appleMusicId)
+        // Use preview URL if available, otherwise fall back to Apple Music
+        if let previewUrl = track.previewUrl {
+            PreviewPlayer.shared.play(previewUrl: previewUrl)
+            isPlaying = true
+        } else if let appleMusicId = track.appleMusicId {
+            // Fallback to Apple Music if no preview URL
+            isPlaying = true
+            Task {
+                await AppleMusicManager.shared.playSong(appleMusicId: appleMusicId)
+            }
         }
     }
     
     private func stopPlayback() {
         isPlaying = false
-        // Stop the system music player
-        Task {
-            let player = SystemMusicPlayer.shared
-            player.stop()
-        }
+        PreviewPlayer.shared.stop()
     }
 }
 
