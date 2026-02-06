@@ -937,6 +937,8 @@ struct CuratedHomeScreen: View {
     @State private var genres: [GenreData] = []
     @State private var isLoading = true
     @State private var weekDateRange: String = ""
+    @State private var errorMessage: String? = nil
+    @AppStorage("userId") private var userId: String = ""
     
     var body: some View {
         ScrollView(showsIndicators: false) {
@@ -965,9 +967,49 @@ struct CuratedHomeScreen: View {
                     VStack {
                         Spacer().frame(height: 100)
                         WaveformLoadingView()
+                        Text("Finding new releases for you...")
+                            .font(.system(size: 14))
+                            .foregroundColor(.gray)
+                            .padding(.top, 16)
                         Spacer()
                     }
                     .frame(maxWidth: .infinity)
+                } else if let error = errorMessage {
+                    VStack(spacing: 16) {
+                        Spacer().frame(height: 100)
+                        Image(systemName: "exclamationmark.triangle")
+                            .font(.system(size: 40))
+                            .foregroundColor(.gray)
+                        Text(error)
+                            .font(.system(size: 14))
+                            .foregroundColor(.gray)
+                            .multilineTextAlignment(.center)
+                        Button("Try Again") {
+                            loadWeeklyDrop()
+                        }
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundColor(.pairPurple)
+                        Spacer()
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.horizontal, 24)
+                } else if genres.isEmpty {
+                    VStack(spacing: 16) {
+                        Spacer().frame(height: 100)
+                        Image(systemName: "music.note.list")
+                            .font(.system(size: 40))
+                            .foregroundColor(.gray)
+                        Text("No new releases matched your taste this week")
+                            .font(.system(size: 14))
+                            .foregroundColor(.gray)
+                            .multilineTextAlignment(.center)
+                        Text("Check back Thursday for fresh drops")
+                            .font(.system(size: 12))
+                            .foregroundColor(.gray.opacity(0.7))
+                        Spacer()
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.horizontal, 24)
                 } else {
                     LazyVStack(alignment: .leading, spacing: 32) {
                         ForEach(Array(genres.enumerated()), id: \.element.id) { index, genre in
@@ -982,7 +1024,7 @@ struct CuratedHomeScreen: View {
             }
         }
         .onAppear {
-            loadGenres()
+            loadWeeklyDrop()
         }
     }
     
@@ -990,123 +1032,171 @@ struct CuratedHomeScreen: View {
         genres.reduce(0) { $0 + $1.tracks.count }
     }
     
-    private func loadGenres() {
+    private func loadWeeklyDrop() {
         isLoading = true
+        errorMessage = nil
         
         // Set the week date range
         let weekRange = WeeklyDateHelper.getCurrentWeekRange()
         weekDateRange = weekRange.displayString
         
         Task {
-            // Try to get recently played first, then fall back to library
-            var allSongs: [MusicKit.Song] = []
-            
-            // Get recently played tracks (most likely to have good metadata)
-            let recentlyPlayed = await AppleMusicManager.shared.getRecentlyPlayed()
-            allSongs.append(contentsOf: recentlyPlayed)
-            
-            // Also get library songs
-            let librarySongs = await AppleMusicManager.shared.getLibrarySongs(limit: 100)
-            
-            // Add library songs that aren't already in recently played
-            let recentIds = Set(recentlyPlayed.map { $0.id.rawValue })
-            for song in librarySongs {
-                if !recentIds.contains(song.id.rawValue) {
-                    allSongs.append(song)
-                }
-            }
-            
-            // Group songs by genre, filtering out "Other" and empty genres
-            var genreGroups: [String: [MusicKit.Song]] = [:]
-            
-            for song in allSongs {
-                // Get all genre names and use the most specific one
-                let genreNames = song.genreNames
-                var bestGenre: String? = nil
+            do {
+                // Fetch weekly drop from API (new releases only!)
+                let response = try await APIService.shared.getWeeklyDrop(userId: userId.isEmpty ? "anonymous" : userId)
                 
-                // Prefer more specific genres over generic ones
-                for name in genreNames {
-                    let lowered = name.lowercased()
-                    // Skip very generic genres
-                    if lowered == "music" || lowered == "other" || lowered == "unknown" {
-                        continue
+                // Convert API response to GenreData format
+                var loadedGenres: [GenreData] = []
+                
+                if let apiGenres = response.genres {
+                    for apiGenre in apiGenres {
+                        var tracks: [TrackData] = []
+                        
+                        for track in apiGenre.tracks {
+                            tracks.append(TrackData(
+                                title: track.trackName ?? "Unknown",
+                                artist: track.artistName ?? "Unknown Artist",
+                                artworkUrl: track.albumArtUrl ?? "",
+                                genreName: apiGenre.displayName,
+                                appleMusicId: track.appleMusicId ?? "",
+                                appleMusicUrl: nil  // Will be constructed from ID if needed
+                            ))
+                        }
+                        
+                        if !tracks.isEmpty {
+                            loadedGenres.append(GenreData(
+                                name: apiGenre.displayName,
+                                descriptor: apiGenre.descriptor ?? getGenreDescriptor(for: apiGenre.displayName),
+                                editorialSummary: "New releases curated for your taste",
+                                tracks: tracks
+                            ))
+                        }
                     }
-                    bestGenre = name
-                    break
                 }
                 
-                guard let genreName = bestGenre else { continue }
-                
-                if genreGroups[genreName] == nil {
-                    genreGroups[genreName] = []
+                await MainActor.run {
+                    genres = loadedGenres
+                    isLoading = false
                 }
-                genreGroups[genreName]?.append(song)
+                
+            } catch {
+                print("[CuratedHomeScreen] API error: \(error)")
+                
+                // Fall back to local Apple Music library if API fails
+                await loadFromLocalLibrary()
+            }
+        }
+    }
+    
+    // Fallback: Load from local Apple Music library if API is unavailable
+    private func loadFromLocalLibrary() async {
+        var allSongs: [MusicKit.Song] = []
+        
+        // Get recently played tracks
+        let recentlyPlayed = await AppleMusicManager.shared.getRecentlyPlayed()
+        allSongs.append(contentsOf: recentlyPlayed)
+        
+        // Also get library songs
+        let librarySongs = await AppleMusicManager.shared.getLibrarySongs(limit: 100)
+        
+        // Add library songs that aren't already in recently played
+        let recentIds = Set(recentlyPlayed.map { $0.id.rawValue })
+        for song in librarySongs {
+            if !recentIds.contains(song.id.rawValue) {
+                allSongs.append(song)
+            }
+        }
+        
+        // Group songs by genre
+        var genreGroups: [String: [MusicKit.Song]] = [:]
+        
+        for song in allSongs {
+            let genreNames = song.genreNames
+            var bestGenre: String? = nil
+            
+            for name in genreNames {
+                let lowered = name.lowercased()
+                if lowered == "music" || lowered == "other" || lowered == "unknown" {
+                    continue
+                }
+                bestGenre = name
+                break
             }
             
-            // Convert to GenreData, limiting to top genres with most tracks
-            var loadedGenres: [GenreData] = []
+            guard let genreName = bestGenre else { continue }
             
-            // Sort genres by track count and take top ones
-            let sortedGenres = genreGroups.sorted { $0.value.count > $1.value.count }
+            if genreGroups[genreName] == nil {
+                genreGroups[genreName] = []
+            }
+            genreGroups[genreName]?.append(song)
+        }
+        
+        // Convert to GenreData
+        var loadedGenres: [GenreData] = []
+        let sortedGenres = genreGroups.sorted { $0.value.count > $1.value.count }
+        
+        for (genreName, songsInGenre) in sortedGenres.prefix(6) {
+            var tracks: [TrackData] = []
             
-            for (genreName, songsInGenre) in sortedGenres.prefix(6) {
-                var tracks: [TrackData] = []
+            for song in songsInGenre.prefix(5) {
+                let artworkUrl = song.artwork?.url(width: 400, height: 400)?.absoluteString ?? ""
+                let appleMusicUrl = song.url?.absoluteString
                 
-                // Take up to 5 tracks per genre
-                for song in songsInGenre.prefix(5) {
-                    let artworkUrl = song.artwork?.url(width: 400, height: 400)?.absoluteString ?? ""
-                    let appleMusicUrl = song.url?.absoluteString
-                    
-                    tracks.append(TrackData(
-                        title: song.title,
-                        artist: song.artistName,
-                        artworkUrl: artworkUrl,
-                        genreName: genreName,
-                        appleMusicId: song.id.rawValue,
-                        appleMusicUrl: appleMusicUrl
-                    ))
-                }
-                
-                if !tracks.isEmpty {
-                    let descriptor = getGenreDescriptor(for: genreName)
-                    let summary = "Based on \(songsInGenre.count) tracks you've been listening to."
-                    
-                    loadedGenres.append(GenreData(
-                        name: genreName,
-                        descriptor: descriptor,
-                        editorialSummary: summary,
-                        tracks: tracks
-                    ))
-                }
+                tracks.append(TrackData(
+                    title: song.title,
+                    artist: song.artistName,
+                    artworkUrl: artworkUrl,
+                    genreName: genreName,
+                    appleMusicId: song.id.rawValue,
+                    appleMusicUrl: appleMusicUrl
+                ))
             }
             
-            await MainActor.run {
-                genres = loadedGenres
-                isLoading = false
+            if !tracks.isEmpty {
+                let descriptor = getGenreDescriptor(for: genreName)
+                let summary = "From your library"
+                
+                loadedGenres.append(GenreData(
+                    name: genreName,
+                    descriptor: descriptor,
+                    editorialSummary: summary,
+                    tracks: tracks
+                ))
             }
+        }
+        
+        await MainActor.run {
+            genres = loadedGenres
+            isLoading = false
         }
     }
     
     private func getGenreDescriptor(for genre: String) -> String {
         let descriptors: [String: String] = [
-            "Pop": "Catchy - melodic - accessible",
-            "Hip-Hop/Rap": "Rhythmic - lyrical - bass-heavy",
-            "R&B/Soul": "Smooth - emotional - groove-driven",
-            "Rock": "Guitar-driven - energetic - raw",
-            "Electronic": "Synthesized - atmospheric - danceable",
-            "Alternative": "Experimental - indie - boundary-pushing",
-            "Dance": "High-energy - club-ready - rhythmic",
-            "Country": "Storytelling - acoustic - heartfelt",
-            "Jazz": "Improvisational - sophisticated - timeless",
-            "Classical": "Orchestral - composed - refined",
-            "Indie": "Independent - authentic - creative",
-            "Metal": "Heavy - intense - powerful",
-            "Folk": "Acoustic - traditional - narrative",
-            "Reggae": "Laid-back - rhythmic - island vibes",
-            "Latin": "Passionate - rhythmic - vibrant",
-            "Blues": "Soulful - expressive - roots-based"
+            "Pop": "Catchy · melodic · accessible",
+            "Hip-Hop": "Rhythmic · lyrical · bass-heavy",
+            "Hip-Hop/Rap": "Rhythmic · lyrical · bass-heavy",
+            "R&B / Soul": "Smooth · emotional · groove-driven",
+            "R&B/Soul": "Smooth · emotional · groove-driven",
+            "Rock": "Guitar-driven · energetic · raw",
+            "Electronic": "Synthesized · atmospheric · danceable",
+            "Indie / Alternative": "Experimental · indie · boundary-pushing",
+            "Alternative": "Experimental · indie · boundary-pushing",
+            "Dance": "High-energy · club-ready · rhythmic",
+            "Country": "Storytelling · acoustic · heartfelt",
+            "Jazz": "Improvisational · sophisticated · timeless",
+            "Classical": "Orchestral · composed · refined",
+            "Indie": "Independent · authentic · creative",
+            "Metal": "Heavy · intense · powerful",
+            "Folk / Singer-Songwriter": "Acoustic · traditional · narrative",
+            "Folk": "Acoustic · traditional · narrative",
+            "Reggae": "Laid-back · rhythmic · island vibes",
+            "Latin": "Passionate · rhythmic · vibrant",
+            "Blues": "Soulful · expressive · roots-based",
+            "Ambient / Experimental": "Atmospheric · textural · immersive",
+            "Global": "World · diverse · cultural"
         ]
-        return descriptors[genre] ?? "Curated from your library"
+        return descriptors[genre] ?? "Curated for your taste"
     }
 }
 
