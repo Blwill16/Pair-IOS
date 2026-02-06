@@ -8,7 +8,7 @@
 			<key>CFBundleTypeRole</key>
 			<string>Editor</string>
 			<key>CFBundleURLName</key>
-			<string>com.pair.app</string>
+			<string>com.brendanwilliams.pair</string>
 			<key>CFBundleURLSchemes</key>
 			<array>
 				<string>pair</string>
