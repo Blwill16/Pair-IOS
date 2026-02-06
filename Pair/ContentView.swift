@@ -896,6 +896,8 @@ struct TrackData: Identifiable {
     let artist: String
     let artworkUrl: String
     var genreName: String?
+    var appleMusicId: String?
+    var appleMusicUrl: String?
 }
 
 // MARK: - Screen 9: Curated Genres (Home)
@@ -960,50 +962,71 @@ struct CuratedHomeScreen: View {
     private func loadGenres() {
         isLoading = true
         
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-            genres = [
-                GenreData(
+        Task {
+            // Search Apple Music for real tracks in each genre
+            let genreSearches: [(name: String, descriptor: String, summary: String, queries: [String])] = [
+                (
                     name: "Melodic Electronic",
                     descriptor: "Atmospheric - emotional - long-form",
-                    editorialSummary: "This week leaned melodic but restrained - fewer releases, higher conviction.",
-                    tracks: [
-                        TrackData(title: "Cascade", artist: "Olafur Arnalds", artworkUrl: "https://picsum.photos/seed/cascade/200", genreName: "Melodic Electronic"),
-                        TrackData(title: "Echo Chambers", artist: "Nils Frahm", artworkUrl: "https://picsum.photos/seed/echo/200", genreName: "Melodic Electronic"),
-                        TrackData(title: "Weightless", artist: "Kiasmos", artworkUrl: "https://picsum.photos/seed/weightless/200", genreName: "Melodic Electronic"),
-                        TrackData(title: "Drifting", artist: "Jon Hopkins", artworkUrl: "https://picsum.photos/seed/drifting/200", genreName: "Melodic Electronic")
-                    ]
+                    summary: "This week leaned melodic but restrained - fewer releases, higher conviction.",
+                    queries: ["Olafur Arnalds", "Nils Frahm", "Kiasmos", "Jon Hopkins"]
                 ),
-                GenreData(
+                (
                     name: "Indie Dance",
                     descriptor: "Groove-forward - restrained",
-                    editorialSummary: "A quieter week for indie dance - only the essentials made the cut.",
-                    tracks: [
-                        TrackData(title: "Midnight City", artist: "M83", artworkUrl: "https://picsum.photos/seed/midnight/200", genreName: "Indie Dance"),
-                        TrackData(title: "Opus", artist: "Eric Prydz", artworkUrl: "https://picsum.photos/seed/opus/200", genreName: "Indie Dance")
-                    ]
+                    summary: "A quieter week for indie dance - only the essentials made the cut.",
+                    queries: ["M83 Midnight City", "Eric Prydz Opus"]
                 ),
-                GenreData(
+                (
                     name: "Dream Pop",
                     descriptor: "Soft focus - textural",
-                    editorialSummary: "Hazy, atmospheric releases dominated this week's dream pop selections.",
-                    tracks: [
-                        TrackData(title: "Space Song", artist: "Beach House", artworkUrl: "https://picsum.photos/seed/space/200", genreName: "Dream Pop"),
-                        TrackData(title: "Cherry", artist: "Chromatics", artworkUrl: "https://picsum.photos/seed/cherry/200", genreName: "Dream Pop"),
-                        TrackData(title: "Myth", artist: "Beach House", artworkUrl: "https://picsum.photos/seed/myth/200", genreName: "Dream Pop")
-                    ]
+                    summary: "Hazy, atmospheric releases dominated this week's dream pop selections.",
+                    queries: ["Beach House Space Song", "Chromatics Cherry", "Beach House Myth"]
                 ),
-                GenreData(
+                (
                     name: "Alt R&B",
                     descriptor: "Intimate - boundary-pushing",
-                    editorialSummary: "Experimental R&B with emotional depth and production innovation.",
-                    tracks: [
-                        TrackData(title: "Thinkin Bout You", artist: "Frank Ocean", artworkUrl: "https://picsum.photos/seed/thinkin/200", genreName: "Alt R&B"),
-                        TrackData(title: "Blinding Lights", artist: "The Weeknd", artworkUrl: "https://picsum.photos/seed/blinding/200", genreName: "Alt R&B"),
-                        TrackData(title: "Pink + White", artist: "Frank Ocean", artworkUrl: "https://picsum.photos/seed/pink/200", genreName: "Alt R&B")
-                    ]
+                    summary: "Experimental R&B with emotional depth and production innovation.",
+                    queries: ["Frank Ocean Thinkin Bout You", "The Weeknd Blinding Lights", "Frank Ocean Pink White"]
                 )
             ]
-            isLoading = false
+            
+            var loadedGenres: [GenreData] = []
+            
+            for genreInfo in genreSearches {
+                var tracks: [TrackData] = []
+                
+                for query in genreInfo.queries {
+                    let songs = await AppleMusicManager.shared.searchCatalog(query: query, limit: 1)
+                    if let song = songs.first {
+                        let artworkUrl = song.artwork?.url(width: 400, height: 400)?.absoluteString ?? ""
+                        let appleMusicUrl = song.url?.absoluteString
+                        
+                        tracks.append(TrackData(
+                            title: song.title,
+                            artist: song.artistName,
+                            artworkUrl: artworkUrl,
+                            genreName: genreInfo.name,
+                            appleMusicId: song.id.rawValue,
+                            appleMusicUrl: appleMusicUrl
+                        ))
+                    }
+                }
+                
+                if !tracks.isEmpty {
+                    loadedGenres.append(GenreData(
+                        name: genreInfo.name,
+                        descriptor: genreInfo.descriptor,
+                        editorialSummary: genreInfo.summary,
+                        tracks: tracks
+                    ))
+                }
+            }
+            
+            await MainActor.run {
+                genres = loadedGenres
+                isLoading = false
+            }
         }
     }
 }
@@ -1146,12 +1169,18 @@ struct NowPlayingScreen: View {
     let track: TrackData
     @Environment(\.dismiss) var dismiss
     @State private var isSaved = false
+    @State private var isHolding = false
+    @State private var holdProgress: CGFloat = 0
+    @State private var showSaveSuccess = false
+    
+    private let holdDuration: Double = 1.0 // 1 second
     
     var body: some View {
         ZStack {
             Color.white.ignoresSafeArea()
             
             VStack(spacing: 0) {
+                // Close button at top right
                 HStack {
                     Spacer()
                     Button(action: { dismiss() }) {
@@ -1170,6 +1199,7 @@ struct NowPlayingScreen: View {
                 
                 Spacer()
                 
+                // Album artwork
                 AsyncImage(url: URL(string: track.artworkUrl)) { image in
                     image
                         .resizable()
@@ -1184,6 +1214,7 @@ struct NowPlayingScreen: View {
                 
                 Spacer().frame(height: 40)
                 
+                // Track info
                 VStack(spacing: 8) {
                     Text(track.title)
                         .font(.system(size: 24, weight: .bold))
@@ -1202,32 +1233,145 @@ struct NowPlayingScreen: View {
                 
                 Spacer()
                 
-                HStack(spacing: 32) {
+                // Action buttons: Skip | Hold-to-Save | Open in Apple Music
+                HStack(spacing: 40) {
+                    // Left button: Skip/Decline
                     Button(action: { dismiss() }) {
                         Image(systemName: "forward.end")
-                            .font(.system(size: 20))
+                            .font(.system(size: 22))
                             .foregroundColor(.black)
-                    }
-                    
-                    Button(action: { isSaved.toggle() }) {
-                        Image(systemName: isSaved ? "heart.fill" : "heart")
-                            .font(.system(size: 24))
-                            .foregroundColor(.white)
-                            .padding(24)
+                            .frame(width: 56, height: 56)
                             .background(
                                 Circle()
-                                    .fill(Color.pairPurple)
+                                    .fill(Color.gray.opacity(0.1))
                             )
                     }
                     
-                    Button(action: {}) {
-                        Image(systemName: "square.and.arrow.up")
-                            .font(.system(size: 20))
+                    // Center button: Hold-to-Save with progress ring
+                    ZStack {
+                        // Background circle
+                        Circle()
+                            .fill(Color.pairPurple)
+                            .frame(width: 72, height: 72)
+                            .scaleEffect(isHolding ? 0.95 : (showSaveSuccess ? 1.05 : 1.0))
+                            .animation(.easeInOut(duration: 0.1), value: isHolding)
+                            .animation(.easeInOut(duration: 0.2), value: showSaveSuccess)
+                        
+                        // Progress ring track (background)
+                        Circle()
+                            .stroke(Color.white.opacity(0.3), lineWidth: 3)
+                            .frame(width: 66, height: 66)
+                        
+                        // Progress ring (animated)
+                        Circle()
+                            .trim(from: 0, to: holdProgress)
+                            .stroke(Color.white, style: StrokeStyle(lineWidth: 3, lineCap: .round))
+                            .frame(width: 66, height: 66)
+                            .rotationEffect(.degrees(-90))
+                            .animation(.linear(duration: 0.016), value: holdProgress)
+                        
+                        // Heart icon
+                        Image(systemName: isSaved ? "heart.fill" : "heart")
+                            .font(.system(size: 28))
+                            .foregroundColor(.white)
+                    }
+                    .gesture(
+                        DragGesture(minimumDistance: 0)
+                            .onChanged { _ in
+                                if !isHolding && !isSaved {
+                                    startHold()
+                                }
+                            }
+                            .onEnded { _ in
+                                endHold()
+                            }
+                    )
+                    
+                    // Right button: Open in Apple Music
+                    Button(action: openInAppleMusic) {
+                        Image(systemName: "arrow.up.right")
+                            .font(.system(size: 20, weight: .medium))
                             .foregroundColor(.black)
+                            .frame(width: 56, height: 56)
+                            .background(
+                                Circle()
+                                    .stroke(Color.gray.opacity(0.3), lineWidth: 1)
+                            )
                     }
                 }
                 
                 Spacer().frame(height: 60)
+            }
+        }
+    }
+    
+    private func startHold() {
+        isHolding = true
+        holdProgress = 0
+        
+        // Animate progress over holdDuration
+        let startTime = Date()
+        Timer.scheduledTimer(withTimeInterval: 0.016, repeats: true) { timer in
+            let elapsed = Date().timeIntervalSince(startTime)
+            let progress = min(elapsed / holdDuration, 1.0)
+            
+            if isHolding {
+                holdProgress = CGFloat(progress)
+                
+                if progress >= 1.0 {
+                    timer.invalidate()
+                    completeHold()
+                }
+            } else {
+                timer.invalidate()
+                withAnimation(.easeOut(duration: 0.2)) {
+                    holdProgress = 0
+                }
+            }
+        }
+    }
+    
+    private func endHold() {
+        if holdProgress < 1.0 {
+            isHolding = false
+            withAnimation(.easeOut(duration: 0.2)) {
+                holdProgress = 0
+            }
+        }
+    }
+    
+    private func completeHold() {
+        isHolding = false
+        isSaved = true
+        showSaveSuccess = true
+        
+        // Add to Apple Music library
+        if let appleMusicId = track.appleMusicId {
+            Task {
+                let _ = await AppleMusicManager.shared.addToLibrary(appleMusicId: appleMusicId)
+            }
+        }
+        
+        // Reset success animation after a moment
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+            showSaveSuccess = false
+        }
+        
+        // Reset progress
+        withAnimation(.easeOut(duration: 0.3)) {
+            holdProgress = 0
+        }
+    }
+    
+    private func openInAppleMusic() {
+        // Try to open in Apple Music app
+        if let appleMusicUrl = track.appleMusicUrl,
+           let url = URL(string: appleMusicUrl) {
+            UIApplication.shared.open(url)
+        } else if let appleMusicId = track.appleMusicId {
+            // Fallback: construct Apple Music URL from ID
+            if let url = URL(string: "https://music.apple.com/song/\(appleMusicId)") {
+                UIApplication.shared.open(url)
             }
         }
     }
