@@ -883,8 +883,8 @@ struct TrackData: Identifiable {
 
 // MARK: - Weekly Date Helper
 struct WeeklyDateHelper {
-    // Get the current week's date range based on New York timezone
-    // Week starts on Thursday (when new music drops)
+    // Get the current week's date based on New York timezone
+    // Week starts on Friday (new music refresh day)
     static func getCurrentWeekRange() -> (start: Date, end: Date, displayString: String) {
         let nyTimeZone = TimeZone(identifier: "America/New_York")!
         var calendar = Calendar.current
@@ -893,28 +893,28 @@ struct WeeklyDateHelper {
         let now = Date()
         let weekday = calendar.component(.weekday, from: now)
         
-        // Find the most recent Thursday (weekday 5)
-        // If today is Thursday, use today as start
-        var daysToSubtract = (weekday - 5 + 7) % 7
-        if daysToSubtract == 0 && calendar.component(.hour, from: now) < 0 {
-            // If it's Thursday but before midnight, use last Thursday
-            daysToSubtract = 7
+        // Find the most recent Friday (weekday 6)
+        // If today is Friday, use today as start
+        var daysToSubtract = (weekday - 6 + 7) % 7
+        if daysToSubtract == 0 {
+            // It's Friday - use today
+            daysToSubtract = 0
         }
         
         let startOfWeek = calendar.date(byAdding: .day, value: -daysToSubtract, to: now)!
         let endOfWeek = calendar.date(byAdding: .day, value: 6, to: startOfWeek)!
         
+        // Display just the Friday date (not a range)
         let formatter = DateFormatter()
         formatter.dateFormat = "MM/dd"
         formatter.timeZone = nyTimeZone
         
-        let startStr = formatter.string(from: startOfWeek)
-        let endStr = formatter.string(from: endOfWeek)
+        let dateStr = formatter.string(from: startOfWeek)
         
-        return (startOfWeek, endOfWeek, "\(startStr) - \(endStr)")
+        return (startOfWeek, endOfWeek, dateStr)
     }
     
-    // Check if it's time to refresh (Thursday midnight in New York)
+    // Check if it's time to refresh (Friday in New York)
     static func shouldRefreshContent() -> Bool {
         let nyTimeZone = TimeZone(identifier: "America/New_York")!
         var calendar = Calendar.current
@@ -924,8 +924,8 @@ struct WeeklyDateHelper {
         let weekday = calendar.component(.weekday, from: now)
         let hour = calendar.component(.hour, from: now)
         
-        // Thursday is weekday 5, check if it's around midnight (0-1 hour)
-        return weekday == 5 && hour == 0
+        // Friday is weekday 6, check if it's around midnight (0-1 hour)
+        return weekday == 6 && hour == 0
     }
 }
 
