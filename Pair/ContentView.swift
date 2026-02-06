@@ -569,6 +569,8 @@ struct ConnectAppleMusicScreen: View {
 // MARK: - Screen 4: Listening Analysis
 struct ListeningAnalysisScreen: View {
     let onComplete: ([TasteGenre]) -> Void
+    @State private var isAnalyzing = true
+    @State private var progress: Double = 0
     
     var body: some View {
         VStack(spacing: 0) {
@@ -582,21 +584,106 @@ struct ListeningAnalysisScreen: View {
                 Text("Understanding how you listen")
                     .font(.system(size: 16))
                     .foregroundColor(.gray)
+                
+                if isAnalyzing {
+                    ProgressView()
+                        .progressViewStyle(CircularProgressViewStyle(tint: .pairPurple))
+                        .scaleEffect(1.2)
+                        .padding(.top, 20)
+                }
             }
             
             Spacer()
         }
         .onAppear {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) {
-                let genres = [
-                    TasteGenre(name: "Melodic Electronic", descriptor: "Atmospheric - emotional - long-form"),
-                    TasteGenre(name: "Dream Pop", descriptor: "Soft focus - textural"),
-                    TasteGenre(name: "Alt R&B", descriptor: "Intimate - boundary-pushing"),
-                    TasteGenre(name: "Indie Dance", descriptor: "Groove-forward - restrained")
+            analyzeUserLibrary()
+        }
+    }
+    
+    private func analyzeUserLibrary() {
+        Task {
+            // Get user's library songs and recently played
+            let recentlyPlayed = await AppleMusicManager.shared.getRecentlyPlayed()
+            let librarySongs = await AppleMusicManager.shared.getLibrarySongs(limit: 200)
+            
+            // Combine all songs
+            var allSongs = recentlyPlayed
+            let recentIds = Set(recentlyPlayed.map { $0.id.rawValue })
+            for song in librarySongs {
+                if !recentIds.contains(song.id.rawValue) {
+                    allSongs.append(song)
+                }
+            }
+            
+            // Count genre occurrences
+            var genreCounts: [String: Int] = [:]
+            
+            for song in allSongs {
+                for genreName in song.genreNames {
+                    let lowered = genreName.lowercased()
+                    // Skip generic genres
+                    if lowered == "music" || lowered == "other" || lowered == "unknown" {
+                        continue
+                    }
+                    genreCounts[genreName, default: 0] += 1
+                }
+            }
+            
+            // Sort by count and take top genres
+            let sortedGenres = genreCounts.sorted { $0.value > $1.value }
+            let topGenres = sortedGenres.prefix(6)
+            
+            // Convert to TasteGenre format
+            var detectedGenres: [TasteGenre] = []
+            
+            for (genreName, _) in topGenres {
+                let descriptor = getDescriptorForGenre(genreName)
+                detectedGenres.append(TasteGenre(name: genreName, descriptor: descriptor))
+            }
+            
+            // If no genres detected, use defaults
+            if detectedGenres.isEmpty {
+                detectedGenres = [
+                    TasteGenre(name: "Pop", descriptor: "Catchy - melodic - accessible"),
+                    TasteGenre(name: "Hip-Hop/Rap", descriptor: "Rhythmic - lyrical - bass-heavy"),
+                    TasteGenre(name: "R&B/Soul", descriptor: "Smooth - emotional - groove-driven")
                 ]
-                onComplete(genres)
+            }
+            
+            // Small delay for UX
+            try? await Task.sleep(nanoseconds: 1_500_000_000)
+            
+            await MainActor.run {
+                isAnalyzing = false
+                onComplete(detectedGenres)
             }
         }
+    }
+    
+    private func getDescriptorForGenre(_ genre: String) -> String {
+        let descriptors: [String: String] = [
+            "Pop": "Catchy - melodic - accessible",
+            "Hip-Hop": "Rhythmic - lyrical - bass-heavy",
+            "Hip-Hop/Rap": "Rhythmic - lyrical - bass-heavy",
+            "R&B/Soul": "Smooth - emotional - groove-driven",
+            "R&B": "Smooth - emotional - groove-driven",
+            "Rock": "Guitar-driven - energetic - raw",
+            "Electronic": "Synthesized - atmospheric - danceable",
+            "Alternative": "Experimental - indie - boundary-pushing",
+            "Dance": "High-energy - club-ready - rhythmic",
+            "Country": "Storytelling - acoustic - heartfelt",
+            "Jazz": "Improvisational - sophisticated - timeless",
+            "Classical": "Orchestral - composed - refined",
+            "Indie": "Independent - authentic - creative",
+            "Metal": "Heavy - intense - powerful",
+            "Folk": "Acoustic - traditional - narrative",
+            "Reggae": "Laid-back - rhythmic - island vibes",
+            "Latin": "Passionate - rhythmic - vibrant",
+            "Blues": "Soulful - expressive - roots-based",
+            "Soundtrack": "Cinematic - evocative - immersive",
+            "Singer/Songwriter": "Personal - acoustic - storytelling"
+        ]
+        return descriptors[genre] ?? "Unique - distinctive - curated"
     }
 }
 
@@ -1042,8 +1129,15 @@ struct CuratedHomeScreen: View {
         
         Task {
             do {
-                // Fetch weekly drop from API (new releases only!)
-                let response = try await APIService.shared.getWeeklyDrop(userId: userId.isEmpty ? "anonymous" : userId)
+                // First, get user's library genres to send to API
+                let userGenres = await getUserLibraryGenres()
+                print("[CuratedHomeScreen] User's library genres: \(userGenres)")
+                
+                // Fetch weekly drop from API with user's preferred genres
+                let response = try await APIService.shared.getWeeklyDrop(
+                    userId: userId.isEmpty ? "anonymous" : userId,
+                    preferredGenres: userGenres.isEmpty ? nil : userGenres
+                )
                 
                 // Convert API response to GenreData format
                 var loadedGenres: [GenreData] = []
@@ -1197,6 +1291,42 @@ struct CuratedHomeScreen: View {
             "Global": "World · diverse · cultural"
         ]
         return descriptors[genre] ?? "Curated for your taste"
+    }
+    
+    // Get user's top genres from their Apple Music library
+    private func getUserLibraryGenres() async -> [String] {
+        // Get user's library songs and recently played
+        let recentlyPlayed = await AppleMusicManager.shared.getRecentlyPlayed()
+        let librarySongs = await AppleMusicManager.shared.getLibrarySongs(limit: 200)
+        
+        // Combine all songs
+        var allSongs = recentlyPlayed
+        let recentIds = Set(recentlyPlayed.map { $0.id.rawValue })
+        for song in librarySongs {
+            if !recentIds.contains(song.id.rawValue) {
+                allSongs.append(song)
+            }
+        }
+        
+        // Count genre occurrences
+        var genreCounts: [String: Int] = [:]
+        
+        for song in allSongs {
+            for genreName in song.genreNames {
+                let lowered = genreName.lowercased()
+                // Skip generic genres
+                if lowered == "music" || lowered == "other" || lowered == "unknown" {
+                    continue
+                }
+                genreCounts[genreName, default: 0] += 1
+            }
+        }
+        
+        // Sort by count and take top 8 genres
+        let sortedGenres = genreCounts.sorted { $0.value > $1.value }
+        let topGenres = sortedGenres.prefix(8).map { $0.key }
+        
+        return topGenres
     }
 }
 
