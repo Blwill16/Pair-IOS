@@ -2,11 +2,6 @@ import SwiftUI
 
 // MARK: - Animation Constants
 struct PairAnimations {
-    // Standard easing - smooth deceleration (ease out expo approximation)
-    static func standardEasing(duration: Double = 0.6) -> Animation {
-        .timingCurve(0.16, 1, 0.3, 1, duration: duration)
-    }
-    
     // Common durations
     static let instantFeedback: Double = 0.15
     static let buttonHover: Double = 0.2
@@ -37,8 +32,10 @@ struct PageEntryAnimation: ViewModifier {
             .opacity(isVisible ? 1 : 0)
             .offset(y: isVisible ? 0 : 20)
             .onAppear {
-                withAnimation(PairAnimations.standardEasing(duration: PairAnimations.pageTransitionLong).delay(delay)) {
-                    isVisible = true
+                DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
+                    withAnimation(.easeOut(duration: PairAnimations.pageTransitionLong)) {
+                        isVisible = true
+                    }
                 }
             }
     }
@@ -63,8 +60,10 @@ struct StaggeredListItem: ViewModifier {
             .offset(y: isVisible ? 0 : 10)
             .onAppear {
                 let totalDelay = baseDelay + (Double(index) * staggerDelay)
-                withAnimation(PairAnimations.standardEasing(duration: 0.5).delay(totalDelay)) {
-                    isVisible = true
+                DispatchQueue.main.asyncAfter(deadline: .now() + totalDelay) {
+                    withAnimation(.easeOut(duration: 0.5)) {
+                        isVisible = true
+                    }
                 }
             }
     }
@@ -205,8 +204,10 @@ struct SlideInFromLeft: ViewModifier {
             .opacity(isVisible ? 1 : 0)
             .offset(x: isVisible ? 0 : -20)
             .onAppear {
-                withAnimation(PairAnimations.standardEasing(duration: 0.5).delay(delay)) {
-                    isVisible = true
+                DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
+                    withAnimation(.easeOut(duration: 0.5)) {
+                        isVisible = true
+                    }
                 }
             }
     }
