@@ -17,6 +17,8 @@
 		014 /* AudioPlayer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 114; };
 		017 /* RemixManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 118; };
 		018 /* DesignSystem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 119; };
+		022 /* AnimationHelpers.swift in Sources */ = {isa = PBXBuildFile; fileRef = 123; };
+		023 /* NotificationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 124; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -32,6 +34,8 @@
 		118 /* RemixManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemixManager.swift; sourceTree = "<group>"; };
 		119 /* DesignSystem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DesignSystem.swift; sourceTree = "<group>"; };
 		122 /* LaunchScreen.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = LaunchScreen.storyboard; sourceTree = "<group>"; };
+		123 /* AnimationHelpers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnimationHelpers.swift; sourceTree = "<group>"; };
+		124 /* NotificationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationManager.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -63,6 +67,7 @@
 					304 /* Services */,
 					305 /* Views */,
 					306 /* Components */,
+					307 /* Helpers */,
 					103 /* Assets.xcassets */,
 					117 /* Info.plist */,
 					122 /* LaunchScreen.storyboard */,
@@ -93,6 +98,7 @@
 				106 /* AuthManager.swift */,
 				114 /* AudioPlayer.swift */,
 				118 /* RemixManager.swift */,
+				124 /* NotificationManager.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -109,6 +115,14 @@
 			children = (
 			);
 			path = Components;
+			sourceTree = "<group>";
+		};
+		307 /* Helpers */ = {
+			isa = PBXGroup;
+			children = (
+				123 /* AnimationHelpers.swift */,
+			);
+			path = Helpers;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -184,7 +198,7 @@
 		401 /* Sources */ = {
 				isa = PBXSourcesBuildPhase;
 				buildActionMask = 2147483647;
-				files = (
+			files = (
 					001 /* PairApp.swift in Sources */,
 					002 /* ContentView.swift in Sources */,
 					004 /* Models.swift in Sources */,
@@ -193,6 +207,8 @@
 					014 /* AudioPlayer.swift in Sources */,
 					017 /* RemixManager.swift in Sources */,
 					018 /* DesignSystem.swift in Sources */,
+					022 /* AnimationHelpers.swift in Sources */,
+					023 /* NotificationManager.swift in Sources */,
 				);
 				runOnlyForDeploymentPostprocessing = 0;
 			};
