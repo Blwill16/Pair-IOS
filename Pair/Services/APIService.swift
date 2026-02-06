@@ -395,16 +395,25 @@ class APIService: ObservableObject {
     
     // MARK: - Curator Engine API
     
-    func getWeeklyDrop(userId: String, preferredGenres: [String]? = nil) async throws -> WeeklyDropResponse {
+    func getWeeklyDrop(userId: String, preferredGenres: [String]? = nil, forceRefresh: Bool = false) async throws -> WeeklyDropResponse {
         guard var urlComponents = URLComponents(string: "\(baseURL)/api/weekly-drop") else {
             throw APIError.invalidURL
         }
         
+        var queryItems: [URLQueryItem] = []
+        
         // Add preferred genres as query parameter if provided
         if let genres = preferredGenres, !genres.isEmpty {
-            urlComponents.queryItems = [
-                URLQueryItem(name: "genres", value: genres.joined(separator: ","))
-            ]
+            queryItems.append(URLQueryItem(name: "genres", value: genres.joined(separator: ",")))
+        }
+        
+        // Add refresh parameter to force new data
+        if forceRefresh {
+            queryItems.append(URLQueryItem(name: "refresh", value: "true"))
+        }
+        
+        if !queryItems.isEmpty {
+            urlComponents.queryItems = queryItems
         }
         
         guard let url = urlComponents.url else {

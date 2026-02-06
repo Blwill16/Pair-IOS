@@ -1230,9 +1230,11 @@ struct CuratedHomeScreen: View {
                 print("[CuratedHomeScreen] User's library genres: \(userGenres)")
                 
                 // Fetch weekly drop from API with user's preferred genres
+                // Always force refresh to get the latest tracks
                 let response = try await APIService.shared.getWeeklyDrop(
                     userId: userId.isEmpty ? "anonymous" : userId,
-                    preferredGenres: userGenres.isEmpty ? nil : userGenres
+                    preferredGenres: userGenres.isEmpty ? nil : userGenres,
+                    forceRefresh: true
                 )
                 
                 // Convert API response to GenreData format
