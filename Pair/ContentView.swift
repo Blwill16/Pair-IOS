@@ -931,20 +931,49 @@ struct CuratedHomeScreen: View {
         isLoading = true
         
         Task {
-            // Get songs from user's Apple Music library
-            let librarySongs = await AppleMusicManager.shared.getLibrarySongs(limit: 200)
+            // Try to get recently played first, then fall back to library
+            var allSongs: [MusicKit.Song] = []
             
-            // Group songs by genre
-            var genreGroups: [String: [(song: MusicKit.Song, genre: String)]] = [:]
+            // Get recently played tracks (most likely to have good metadata)
+            let recentlyPlayed = await AppleMusicManager.shared.getRecentlyPlayed()
+            allSongs.append(contentsOf: recentlyPlayed)
             
+            // Also get library songs
+            let librarySongs = await AppleMusicManager.shared.getLibrarySongs(limit: 100)
+            
+            // Add library songs that aren't already in recently played
+            let recentIds = Set(recentlyPlayed.map { $0.id.rawValue })
             for song in librarySongs {
-                // Get the primary genre from the song
-                let genreName = song.genreNames.first ?? "Other"
+                if !recentIds.contains(song.id.rawValue) {
+                    allSongs.append(song)
+                }
+            }
+            
+            // Group songs by genre, filtering out "Other" and empty genres
+            var genreGroups: [String: [MusicKit.Song]] = [:]
+            
+            for song in allSongs {
+                // Get all genre names and use the most specific one
+                let genreNames = song.genreNames
+                var bestGenre: String? = nil
+                
+                // Prefer more specific genres over generic ones
+                for name in genreNames {
+                    let lowered = name.lowercased()
+                    // Skip very generic genres
+                    if lowered == "music" || lowered == "other" || lowered == "unknown" {
+                        continue
+                    }
+                    bestGenre = name
+                    break
+                }
+                
+                guard let genreName = bestGenre else { continue }
                 
                 if genreGroups[genreName] == nil {
                     genreGroups[genreName] = []
                 }
-                genreGroups[genreName]?.append((song: song, genre: genreName))
+                genreGroups[genreName]?.append(song)
             }
             
             // Convert to GenreData, limiting to top genres with most tracks
@@ -957,7 +986,7 @@ struct CuratedHomeScreen: View {
                 var tracks: [TrackData] = []
                 
                 // Take up to 5 tracks per genre
-                for (song, _) in songsInGenre.prefix(5) {
+                for song in songsInGenre.prefix(5) {
                     let artworkUrl = song.artwork?.url(width: 400, height: 400)?.absoluteString ?? ""
                     let appleMusicUrl = song.url?.absoluteString
                     
@@ -973,7 +1002,7 @@ struct CuratedHomeScreen: View {
                 
                 if !tracks.isEmpty {
                     let descriptor = getGenreDescriptor(for: genreName)
-                    let summary = "Based on \(songsInGenre.count) tracks in your library."
+                    let summary = "Based on \(songsInGenre.count) tracks you've been listening to."
                     
                     loadedGenres.append(GenreData(
                         name: genreName,

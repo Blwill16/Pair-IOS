@@ -291,56 +291,58 @@ struct GlassTextFieldStyle: TextFieldStyle {
 // MARK: - Floating Navigation Bar
 struct FloatingNavBar: View {
     @Binding var selectedTab: Int
-    @State private var isBreathing = false
     
     var body: some View {
         HStack(spacing: 0) {
-            // Discover (compass icon)
-            NavBarItem(
-                icon: "safari",
-                isSelected: selectedTab == 0
-            ) {
+            // List/Curated (left - list icon with circle when selected)
+            Button {
                 selectedTab = 0
+            } label: {
+                ZStack {
+                    if selectedTab == 0 {
+                        Circle()
+                            .fill(Color(hex: "f0f0f0"))
+                            .frame(width: 44, height: 44)
+                    }
+                    
+                    Image(systemName: "line.3.horizontal")
+                        .font(.system(size: 18, weight: .medium))
+                        .foregroundColor(selectedTab == 0 ? .black : .pairTextTertiary)
+                }
+                .frame(width: 44, height: 44)
             }
             
-            // Create (center, larger with + icon)
+            Spacer()
+            
+            // Waveform/Equalizer (center)
             Button {
                 selectedTab = 1
             } label: {
-                ZStack {
-                    Circle()
-                        .fill(selectedTab == 1 ? Color.pairPurple : Color(hex: "f0f0f0"))
-                        .frame(width: 52, height: 52)
-                        .shadow(color: selectedTab == 1 ? Color.pairPurple.opacity(0.3) : Color.black.opacity(0.1), radius: 8, y: 2)
-                    
-                    Image(systemName: selectedTab == 1 ? "xmark" : "plus")
-                        .font(.system(size: 22, weight: .medium))
-                        .foregroundColor(selectedTab == 1 ? .white : .pairTextSecondary)
-                }
-                .scaleEffect(isBreathing && selectedTab != 1 ? 1.03 : 1.0)
+                Image(systemName: "waveform")
+                    .font(.system(size: 22, weight: .medium))
+                    .foregroundColor(selectedTab == 1 ? .black : .pairTextTertiary)
+                    .frame(width: 44, height: 44)
             }
-            .padding(.horizontal, 20)
             
-            // Profile (person icon)
-            NavBarItem(
-                icon: "person",
-                isSelected: selectedTab == 2
-            ) {
+            Spacer()
+            
+            // Profile (right - person outline)
+            Button {
                 selectedTab = 2
+            } label: {
+                Image(systemName: "person")
+                    .font(.system(size: 20, weight: .medium))
+                    .foregroundColor(selectedTab == 2 ? .black : .pairTextTertiary)
+                    .frame(width: 44, height: 44)
             }
         }
-        .padding(.horizontal, 20)
-        .padding(.vertical, 10)
+        .padding(.horizontal, 24)
+        .padding(.vertical, 8)
         .background(
             Capsule()
                 .fill(Color.white)
                 .shadow(color: Color.black.opacity(0.12), radius: 16, y: 4)
         )
-        .onAppear {
-            withAnimation(.easeInOut(duration: 3).repeatForever(autoreverses: true)) {
-                isBreathing = true
-            }
-        }
     }
 }
 
