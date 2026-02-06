@@ -91,36 +91,7 @@ struct ButtonScaleAnimation: ViewModifier {
     }
 }
 
-// MARK: - Breathing Animation
-struct BreathingAnimation: ViewModifier {
-    @State private var isAnimating = false
-    let minScale: CGFloat
-    let maxScale: CGFloat
-    let minOpacity: Double
-    let maxOpacity: Double
-    let duration: Double
-    
-    init(minScale: CGFloat = 1.0, maxScale: CGFloat = 1.05, 
-         minOpacity: Double = 0.6, maxOpacity: Double = 0.8,
-         duration: Double = 3.0) {
-        self.minScale = minScale
-        self.maxScale = maxScale
-        self.minOpacity = minOpacity
-        self.maxOpacity = maxOpacity
-        self.duration = duration
-    }
-    
-    func body(content: Content) -> some View {
-        content
-            .scaleEffect(isAnimating ? maxScale : minScale)
-            .opacity(isAnimating ? maxOpacity : minOpacity)
-            .onAppear {
-                withAnimation(.easeInOut(duration: duration).repeatForever(autoreverses: true)) {
-                    isAnimating = true
-                }
-            }
-    }
-}
+// MARK: - Breathing Animation (uses DesignSystem.BreathingAnimation)
 
 // MARK: - Ambient Glow View
 struct AmbientGlowView: View {
@@ -266,10 +237,6 @@ extension View {
     
     func buttonScaleAnimation(hoverScale: CGFloat = 1.02, pressScale: CGFloat = 0.98) -> some View {
         modifier(ButtonScaleAnimation(hoverScale: hoverScale, pressScale: pressScale))
-    }
-    
-    func breathingAnimation(minScale: CGFloat = 1.0, maxScale: CGFloat = 1.05, duration: Double = 3.0) -> some View {
-        modifier(BreathingAnimation(minScale: minScale, maxScale: maxScale, duration: duration))
     }
     
     func slideInFromLeft(delay: Double = 0) -> some View {
